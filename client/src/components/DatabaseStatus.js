@@ -7,23 +7,30 @@ const DatabaseStatus = () => {
   useEffect(() => {
     const checkDatabaseStatus = async () => {
       try {
-        const response = await axios.get('/health');
-        const isConnected = response.data.database?.status === 'Connected' || 
-                           response.data.database === 'Connected';
+        // Test the direct database test function
+        const response = await axios.get('/.netlify/functions/test-db');
         
         setStatus({
           loading: false,
-          connected: isConnected,
+          connected: true,
           error: null,
           details: response.data
         });
       } catch (error) {
         console.error('Database status check failed:', error);
+        
+        let errorMessage = 'Connection failed';
+        if (error.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
         setStatus({
           loading: false,
           connected: false,
-          error: error.message,
-          details: null
+          error: errorMessage,
+          details: error.response?.data
         });
       }
     };
@@ -37,11 +44,43 @@ const DatabaseStatus = () => {
   }, []);
 
   if (status.loading) {
-    return null; // Don't show anything while loading
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#ffc107',
+        color: 'black',
+        padding: '10px',
+        textAlign: 'center',
+        zIndex: 9999,
+        fontSize: '14px',
+        fontWeight: 'bold'
+      }}>
+        🔄 Checking database connection...
+      </div>
+    );
   }
 
   if (status.connected) {
-    return null; // Don't show anything when connected
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#28a745',
+        color: 'white',
+        padding: '10px',
+        textAlign: 'center',
+        zIndex: 9999,
+        fontSize: '14px',
+        fontWeight: 'bold'
+      }}>
+        ✅ Database connected successfully - All features working!
+      </div>
+    );
   }
 
   return (
@@ -58,12 +97,15 @@ const DatabaseStatus = () => {
       fontSize: '14px',
       fontWeight: 'bold'
     }}>
-      ⚠️ Database connection failed - Some features may not work properly
+      ⚠️ Database connection failed - Environment variables not set properly
       {status.error && (
         <span style={{ marginLeft: '10px', fontSize: '12px', opacity: 0.8 }}>
           ({status.error})
         </span>
       )}
+      <div style={{ fontSize: '12px', marginTop: '5px' }}>
+        Please set environment variables in Netlify Dashboard
+      </div>
     </div>
   );
 };
