@@ -1,37 +1,25 @@
 {
-  "name": "rentx-serverless",
+  "name": "rentx-netlify",
   "version": "1.0.0",
-  "description": "RentX Car Rental App - Full Stack Serverless on Netlify",
-  "main": "netlify/functions/api.js",
+  "description": "RentX Car Rental - Netlify Serverless",
   "scripts": {
-    "start": "netlify dev",
-    "build": "npm run build:all",
-    "build:all": "npm install --legacy-peer-deps && cd client && npm install --legacy-peer-deps && npm run build",
-    "build:client": "cd client && npm run build",
+    "build:client": "cd client && npm install --legacy-peer-deps && npm run build",
     "dev": "netlify dev",
     "deploy": "netlify deploy --prod"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "serverless-http": "^3.2.0",
     "mongoose": "^7.5.0",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.4",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "multer": "^1.4.5-lts.1",
     "puppeteer-core": "^10.4.0",
     "chrome-aws-lambda": "^10.1.0",
     "exceljs": "^4.3.0",
     "moment": "^2.29.4",
-    "axios": "^1.5.0",
-    "lambda-multipart-parser": "^1.0.1",
-    "@netlify/functions": "^2.4.0"
+    "axios": "^1.5.0"
   },
   "devDependencies": {
-    "netlify-cli": "^17.0.0",
-    "nodemon": "^3.0.1"
+    "netlify-cli": "^17.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

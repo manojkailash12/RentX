@@ -1,7 +1,7 @@
 [build]
   base = "."
   publish = "client/build"
-  command = "npm run build:all"
+  command = "npm run build:client"
 
 [build.environment]
   NODE_VERSION = "18"
@@ -13,16 +13,10 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
+  to = "/.netlify/functions/:splat"
   status = 200
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-[dev]
-  command = "cd client && npm start"
-  port = 3000
-  publish = "client/build"
-  functions = "netlify/functions"

@@ -1,12 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Configure axios base URL for Netlify Functions
-const API_BASE_URL = process.env.REACT_APP_API_URL || '/.netlify/functions/api';
-axios.defaults.baseURL = API_BASE_URL;
+// Configure axios for Netlify Functions
+axios.defaults.baseURL = '/.netlify/functions';
 
-console.log('🌐 API Base URL:', API_BASE_URL);
-console.log('🔧 Environment:', process.env.REACT_APP_ENVIRONMENT);
+console.log('🌐 API configured for Netlify Functions');
 
 const AuthContext = createContext();
 
@@ -53,12 +51,40 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
+  // API methods
+  const api = {
+    // Auth
+    register: (data) => axios.post('/auth/register', data),
+    verifyOTP: (data) => axios.post('/auth/verify-otp', data),
+    login: (data) => axios.post('/auth/login', data),
+    resendOTP: (data) => axios.post('/auth/resend-otp', data),
+    
+    // Cars
+    getCars: (params) => axios.get('/cars', { params }),
+    getCar: (id) => axios.get(`/cars/${id}`),
+    addCar: (data) => axios.post('/cars', data),
+    
+    // Bookings
+    createBooking: (data) => axios.post('/bookings', data),
+    getUserBookings: (userId) => axios.get('/bookings/user', { params: { userId } }),
+    getBooking: (id) => axios.get(`/bookings/${id}`),
+    getAllBookings: () => axios.get('/bookings/all'),
+    
+    // PDF & Excel
+    downloadPDF: (bookingId) => window.open(`/.netlify/functions/generate-pdf/${bookingId}`, '_blank'),
+    downloadExcel: (type, params) => {
+      const queryString = new URLSearchParams(params).toString();
+      window.open(`/.netlify/functions/generate-excel?type=${type}&${queryString}`, '_blank');
+    }
+  };
+
   const value = {
     user,
     login,
     logout,
     updateUser,
-    loading
+    loading,
+    api
   };
 
   return (

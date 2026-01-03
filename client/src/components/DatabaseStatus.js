@@ -1,45 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 
 const DatabaseStatus = () => {
   const [status, setStatus] = useState({ loading: true, connected: false, error: null });
 
   useEffect(() => {
-    const checkDatabaseStatus = async () => {
+    const checkStatus = async () => {
       try {
-        // Test the direct database test function
-        const response = await axios.get('/.netlify/functions/test-db');
+        const response = await fetch('/.netlify/functions/test-db');
+        const data = await response.json();
         
-        setStatus({
-          loading: false,
-          connected: true,
-          error: null,
-          details: response.data
-        });
-      } catch (error) {
-        console.error('Database status check failed:', error);
-        
-        let errorMessage = 'Connection failed';
-        if (error.response?.data?.error) {
-          errorMessage = error.response.data.error;
-        } else if (error.message) {
-          errorMessage = error.message;
+        if (response.ok && data.success) {
+          setStatus({
+            loading: false,
+            connected: true,
+            error: null,
+            details: data
+          });
+        } else {
+          setStatus({
+            loading: false,
+            connected: false,
+            error: data.error || 'Connection failed',
+            details: data
+          });
         }
-        
+      } catch (error) {
         setStatus({
           loading: false,
           connected: false,
-          error: errorMessage,
-          details: error.response?.data
+          error: 'Network error',
+          details: null
         });
       }
     };
 
-    checkDatabaseStatus();
-    
-    // Check every 30 seconds
-    const interval = setInterval(checkDatabaseStatus, 30000);
-    
+    checkStatus();
+    const interval = setInterval(checkStatus, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -52,7 +48,7 @@ const DatabaseStatus = () => {
         right: 0,
         backgroundColor: '#ffc107',
         color: 'black',
-        padding: '10px',
+        padding: '8px',
         textAlign: 'center',
         zIndex: 9999,
         fontSize: '14px',
@@ -72,13 +68,13 @@ const DatabaseStatus = () => {
         right: 0,
         backgroundColor: '#28a745',
         color: 'white',
-        padding: '10px',
+        padding: '8px',
         textAlign: 'center',
         zIndex: 9999,
         fontSize: '14px',
         fontWeight: 'bold'
       }}>
-        ✅ Database connected successfully - All features working!
+        ✅ All systems operational - Database connected!
       </div>
     );
   }
@@ -91,21 +87,18 @@ const DatabaseStatus = () => {
       right: 0,
       backgroundColor: '#dc3545',
       color: 'white',
-      padding: '10px',
+      padding: '8px',
       textAlign: 'center',
       zIndex: 9999,
       fontSize: '14px',
       fontWeight: 'bold'
     }}>
-      ⚠️ Database connection failed - Environment variables not set properly
+      ⚠️ Database connection failed - Please set environment variables in Netlify
       {status.error && (
         <span style={{ marginLeft: '10px', fontSize: '12px', opacity: 0.8 }}>
           ({status.error})
         </span>
       )}
-      <div style={{ fontSize: '12px', marginTop: '5px' }}>
-        Please set environment variables in Netlify Dashboard
-      </div>
     </div>
   );
 };
