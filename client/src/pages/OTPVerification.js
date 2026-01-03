@@ -16,7 +16,7 @@ const OTPVerification = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   
-  const { userId, email, name } = location.state || {};
+  const { email, name } = location.state || {};
 
   useEffect(() => {
     if (!email) {

@@ -30,7 +30,7 @@ const Cars = () => {
           if (value) queryParams.append(key, value);
         });
 
-        const response = await axios.get(`/api/cars?${queryParams}`);
+        const response = await axios.get(`/.netlify/functions/cars?${queryParams}`);
         setCars(response.data);
         setCurrentPage(1); // Reset to first page when filters change
       } catch (error) {
