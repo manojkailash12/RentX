@@ -32,6 +32,9 @@ const connectToDatabase = async () => {
   }
 
   try {
+    console.log('🔄 Connecting to MongoDB...');
+    console.log('MongoDB URI exists:', !!process.env.MONGODB_URI);
+    
     const connection = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -46,7 +49,8 @@ const connectToDatabase = async () => {
     console.log('✅ Connected to MongoDB Atlas (Serverless)');
     return connection;
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error.message);
+    console.error('MongoDB URI format check:', process.env.MONGODB_URI ? 'URI provided' : 'URI missing');
     throw error;
   }
 };
@@ -71,7 +75,8 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     message: 'RentX Serverless API is running on Netlify',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'production'
+    environment: process.env.NODE_ENV || 'production',
+    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
   });
 });
 
