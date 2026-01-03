@@ -4,6 +4,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
+import DatabaseStatus from './components/DatabaseStatus';
 import AdminLayout from './components/AdminLayout';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -35,6 +36,7 @@ function App() {
         }}
       >
         <div className="App">
+          <DatabaseStatus />
           <Navbar />
           <Routes>
             <Route path="/" element={<Home />} />

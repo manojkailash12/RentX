@@ -1,6 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const axios = require('axios');
 const multer = require('multer');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
