@@ -1,0 +1,380 @@
+.add-vehicle-page {
+  min-height: 100vh;
+  background: #f8f9fa;
+  padding: 20px 0;
+}
+
+.add-vehicle-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.add-vehicle-header h1 {
+  font-size: 2rem;
+  color: #2c3e50;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.add-vehicle-header p {
+  font-size: 1rem;
+  color: #7f8c8d;
+}
+
+.add-vehicle-form {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Compact grid layout for desktop */
+.form-sections-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.form-section {
+  margin-bottom: 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.form-section h3 {
+  color: #2c3e50;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.form-control {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  background: white;
+  font-family: inherit;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.form-control::placeholder {
+  color: #bdc3c7;
+}
+
+.form-group small {
+  color: #7f8c8d;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+/* Compact features grid */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.feature-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+  font-size: 12px;
+}
+
+.feature-checkbox:hover {
+  background: #e9ecef;
+  border-color: #3498db;
+}
+
+.feature-checkbox input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #3498db;
+}
+
+.feature-checkbox span {
+  font-size: 12px;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+/* Full width sections */
+.form-section-full {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.documents-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.images-section {
+  grid-column: 1 / -1;
+}
+
+/* Commission Info */
+.commission-info {
+  background: linear-gradient(135deg, #e8f5e8, #d4edda);
+  border-radius: 15px;
+  padding: 30px;
+  margin: 30px 0;
+  border: 2px solid #27ae60;
+}
+
+.commission-info h3 {
+  color: #27ae60;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+}
+
+.commission-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(39, 174, 96, 0.1);
+}
+
+.commission-icon {
+  font-size: 3rem;
+  flex-shrink: 0;
+}
+
+.commission-details h4 {
+  color: #27ae60;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.commission-details p {
+  color: #2c3e50;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Button Styles */
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2980b9, #1f5f8b);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+}
+
+.btn-lg {
+  padding: 16px 32px;
+  font-size: 16px;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .form-sections-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .form-section-full {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .add-vehicle-page {
+    padding: 15px 0;
+  }
+
+  .add-vehicle-form {
+    margin: 0 15px;
+    padding: 20px 15px;
+  }
+
+  .add-vehicle-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .documents-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .form-section {
+    padding: 15px;
+  }
+
+  .form-section h3 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+
+  .form-control {
+    padding: 10px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .add-vehicle-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .form-section h3 {
+    font-size: 0.95rem;
+  }
+
+  .add-vehicle-form {
+    padding: 15px 10px;
+  }
+
+  .form-section {
+    padding: 12px;
+  }
+
+  .feature-checkbox {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .feature-checkbox span {
+    font-size: 11px;
+  }
+}
+
+/* File Input Styling */
+input[type="file"] {
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 2px dashed #bdc3c7;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+input[type="file"]:hover {
+  border-color: #3498db;
+  background: #e3f2fd;
+}
+
+input[type="file"]:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* Required field indicator */
+label:has(+ .form-control[required])::after,
+label:has(+ input[required])::after,
+label:has(+ select[required])::after {
+  content: " *";
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+/* Success states */
+.form-control:valid {
+  border-color: #27ae60;
+}
+
+.form-control:valid:focus {
+  border-color: #27ae60;
+  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+}
