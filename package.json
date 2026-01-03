@@ -6,7 +6,7 @@
   "scripts": {
     "start": "netlify dev",
     "build": "npm run build:all",
-    "build:all": "npm install && cd client && npm install && npm run build",
+    "build:all": "npm install --legacy-peer-deps && cd client && npm install --legacy-peer-deps && npm run build",
     "build:client": "cd client && npm run build",
     "dev": "netlify dev",
     "deploy": "netlify deploy --prod"
@@ -21,8 +21,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "multer": "^1.4.5-lts.1",
-    "puppeteer": "^21.1.1",
-    "puppeteer-core": "^21.1.1",
+    "puppeteer-core": "^10.4.0",
     "chrome-aws-lambda": "^10.1.0",
     "exceljs": "^4.3.0",
     "moment": "^2.29.4",
