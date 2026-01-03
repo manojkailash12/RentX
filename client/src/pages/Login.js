@@ -26,7 +26,8 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/login', formData);
+      // Use the new serverless function endpoint
+      const response = await axios.post('/.netlify/functions/auth/login', formData);
       
       login(response.data.token, response.data.user);
       toast.success('Login successful! Welcome back! 🎉');
@@ -39,6 +40,19 @@ const Login = () => {
       }
     } catch (error) {
       console.error('Login error:', error);
+      
+      // Handle email verification requirement
+      if (error.response?.data?.requiresVerification) {
+        toast.error('Please verify your email first!');
+        navigate('/verify-otp', { 
+          state: { 
+            email: formData.email,
+            name: 'User'
+          }
+        });
+        return;
+      }
+      
       toast.error(error.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);

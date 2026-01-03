@@ -19,7 +19,7 @@ const OTPVerification = () => {
   const { userId, email, name } = location.state || {};
 
   useEffect(() => {
-    if (!userId || !email) {
+    if (!email) {
       toast.error('Invalid access. Please register again.');
       navigate('/register');
       return;
@@ -38,7 +38,7 @@ const OTPVerification = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [userId, email, navigate]);
+  }, [email, navigate]);
 
   const handleOtpChange = (index, value) => {
     if (value.length > 1) return;
@@ -73,8 +73,9 @@ const OTPVerification = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/verify-otp', {
-        userId,
+      // Use the new serverless function endpoint
+      const response = await axios.post('/.netlify/functions/auth/verify-otp', {
+        email,
         otp: otpString
       });
 
@@ -101,7 +102,8 @@ const OTPVerification = () => {
     setResendLoading(true);
 
     try {
-      await axios.post('/api/auth/resend-otp', { userId });
+      // Use the new serverless function endpoint
+      await axios.post('/.netlify/functions/auth/resend-otp', { email });
       toast.success('OTP sent successfully! Please check your email. 📧');
       
       // Reset countdown

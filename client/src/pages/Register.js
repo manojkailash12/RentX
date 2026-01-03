@@ -61,7 +61,8 @@ const Register = () => {
         role: selectedRole
       };
       
-      const response = await axios.post('/api/auth/register', dataToSubmit);
+      // Use the new serverless function endpoint
+      const response = await axios.post('/.netlify/functions/auth/register', dataToSubmit);
       
       toast.success('Registration successful! Please check your email for OTP verification. 📧');
       
