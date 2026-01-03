@@ -4,7 +4,7 @@ const Car = require('../models/Car');
 const User = require('../models/User');
 const Commission = require('../models/Commission');
 const auth = require('../middleware/auth');
-const { generateInvoicePDF, sendBookingEmail } = require('../utils/pdfGenerator');
+// Note: PDF generation is handled by separate serverless function
 const router = express.Router();
 
 // Calculate distance between two coordinates (Haversine formula)
@@ -175,13 +175,8 @@ router.post('/', auth, async (req, res) => {
       await populatedBooking.save();
     }
 
-    // Generate and send invoice PDF
-    try {
-      await sendBookingEmail(populatedBooking);
-    } catch (emailError) {
-      console.error('Email sending error:', emailError);
-      // Don't fail the booking if email fails
-    }
+    // Note: Email sending is handled by frontend calling serverless function
+    console.log('Booking created successfully, email will be sent via serverless function');
 
     res.status(201).json({
       message: 'Booking created successfully',
@@ -307,12 +302,12 @@ router.post('/:id/resend-receipt', auth, async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    // Generate and send invoice PDF
-    console.log('Sending email for booking:', booking._id);
-    await sendBookingEmail(booking);
-
-    console.log('Email sent successfully for booking:', booking._id);
-    res.json({ message: 'Receipt sent successfully to your email' });
+    // Note: Email sending is handled by serverless function
+    console.log('Receipt request for booking:', booking._id);
+    res.json({ 
+      message: 'Please use the PDF download function or contact support',
+      bookingId: booking._id 
+    });
   } catch (error) {
     console.error('Resend receipt error:', error);
     res.status(500).json({ message: 'Server error while sending receipt', error: error.message });
@@ -368,17 +363,9 @@ router.get('/:id/download-receipt', auth, async (req, res) => {
       });
     }
 
-    // Generate PDF and send as response
-    console.log('Generating PDF for booking:', booking._id);
-    const pdfBuffer = await generateInvoicePDF(booking, true);
-    
-    const filename = `invoice-${booking.invoiceNumber || 'INV-' + booking._id.toString().slice(-8).toUpperCase()}.pdf`;
-    
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-    res.send(pdfBuffer);
-    
-    console.log('PDF sent successfully for booking:', booking._id);
+    // Redirect to serverless PDF generation function
+    console.log('Redirecting to PDF generation for booking:', booking._id);
+    res.redirect(`/.netlify/functions/generate-pdf/${booking._id}`);
   } catch (error) {
     console.error('Download receipt error:', error);
     res.status(500).json({ message: 'Server error while downloading receipt', error: error.message });

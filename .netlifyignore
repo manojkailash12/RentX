@@ -1,0 +1,16 @@
+# Exclude files that use html-pdf from serverless function bundling
+utils/pdfGenerator.js
+utils/reportGenerator.js
+
+# Exclude other non-serverless files
+server.js
+routes/
+middleware/
+uploads/
+client/node_modules/
+client/src/
+client/public/
+.git/
+.vscode/
+*.md
+*.txt

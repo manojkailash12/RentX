@@ -4,7 +4,7 @@ const Car = require('../models/Car');
 const User = require('../models/User');
 const Commission = require('../models/Commission');
 const auth = require('../middleware/auth');
-const { generateReportPDF } = require('../utils/reportGenerator');
+// Note: Report generation is handled by separate serverless function
 const router = express.Router();
 
 // Middleware to check admin role
@@ -577,11 +577,16 @@ router.post('/reports/export-pdf', auth, adminAuth, async (req, res) => {
   try {
     const { reportType, filters } = req.body;
     
-    const pdfBuffer = await generateReportPDF(reportType, filters);
+    // Redirect to serverless Excel generation function
+    const queryParams = new URLSearchParams({
+      type: reportType,
+      ...filters
+    });
     
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=${reportType}-report-${Date.now()}.pdf`);
-    res.send(pdfBuffer);
+    res.json({ 
+      message: 'Use the Excel export function instead',
+      redirectUrl: `/.netlify/functions/generate-excel?${queryParams}`
+    });
   } catch (error) {
     console.error('Export PDF error:', error);
     res.status(500).json({ message: 'Server error while exporting PDF' });
