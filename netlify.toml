@@ -12,12 +12,6 @@
   external_node_modules = ["sharp", "canvas", "bcrypt", "emitter", "batch", "@mapbox/node-pre-gyp"]
   included_files = ["netlify/functions/node_modules/**"]
 
-# Binary media types for PDF and images
-[[functions.api]]
-  path = "/.netlify/functions/api/*"
-  [functions.api.response]
-    binary_media_types = ["application/pdf", "image/*"]
-
 [dev]
   command = "vite"
   port = 8888
