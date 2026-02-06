@@ -207,6 +207,7 @@ const exportEarningsPDF = async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=earnings-report-${year}.pdf`);
     res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
     res.send(pdfBuffer);
   } catch (error) {
     console.error('PDF export error:', error);
@@ -359,6 +360,7 @@ const exportCarsPDF = async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=cars-report-${new Date().toISOString().split('T')[0]}.pdf`);
     res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
     res.send(pdfBuffer);
   } catch (error) {
     console.error('PDF export error:', error);
@@ -501,6 +503,7 @@ const exportBookingsPDF = async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=bookings-report-${new Date().toISOString().split('T')[0]}.pdf`);
     res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
     res.send(pdfBuffer);
   } catch (error) {
     console.error('PDF export error:', error);
