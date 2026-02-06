@@ -106,18 +106,7 @@ const Dashboard = () => {
     return 'Manage your car listings and track your bookings and earnings'
   }
 
-  // Export functions
-  const handleExportPDF = async () => {
-    setExportLoading(true);
-    try {
-      await downloadFile('/admin/earnings/export/pdf', `earnings-report-${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('PDF export error:', error);
-    } finally {
-      setExportLoading(false);
-    }
-  };
-
+  // Export function
   const handleExportExcel = async () => {
     setExportLoading(true);
     try {
@@ -134,34 +123,20 @@ const Dashboard = () => {
       <div className="flex justify-between items-start mb-4">
         <Title title={getDashboardTitle()} subTitle={getDashboardSubtitle()} />
         <div className="flex items-center gap-2">
-          {/* Export buttons for admin */}
+          {/* Export button for admin */}
           {isAdmin && (
-            <>
-              <button 
-                onClick={handleExportPDF}
-                disabled={exportLoading}
-                className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
-              >
-                {exportLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  '📄'
-                )}
-                PDF
-              </button>
-              <button 
-                onClick={handleExportExcel}
-                disabled={exportLoading}
-                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
-              >
-                {exportLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  '📊'
-                )}
-                Excel
-              </button>
-            </>
+            <button 
+              onClick={handleExportExcel}
+              disabled={exportLoading}
+              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+            >
+              {exportLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                '📊'
+              )}
+              Excel
+            </button>
           )}
           <button 
             onClick={manualRefresh}
@@ -291,13 +266,6 @@ const Dashboard = () => {
                   onClick={handleExportPDF}
                   disabled={exportLoading}
                   className='w-full text-left px-3 py-2 text-sm bg-red-50 hover:bg-red-100 rounded-md transition-colors disabled:opacity-50'
-                >
-                  📄 Export PDF Report
-                </button>
-                <button 
-                  onClick={handleExportExcel}
-                  disabled={exportLoading}
-                  className='w-full text-left px-3 py-2 text-sm bg-green-50 hover:bg-green-100 rounded-md transition-colors disabled:opacity-50'
                 >
                   📊 Export Excel Report
                 </button>

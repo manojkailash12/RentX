@@ -109,19 +109,7 @@ const ManageBookings = () => {
     return 'Track bookings for your cars, approve or cancel requests, and manage booking statuses.';
   }
 
-  // Export functions
-  const handleExportPDF = async () => {
-    setExportLoading(true);
-    try {
-      await downloadFile('/admin/bookings/export/pdf', `bookings-report-${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('PDF export error:', error);
-      toast.error('Failed to export PDF');
-    } finally {
-      setExportLoading(false);
-    }
-  };
-
+  // Export function
   const handleExportExcel = async () => {
     setExportLoading(true);
     try {
@@ -155,34 +143,20 @@ const ManageBookings = () => {
     <div className='h-full flex flex-col p-4 md:p-6 bg-gray-50 overflow-auto'>
       <div className="flex justify-between items-start mb-4">
         <Title title={getTitle()} subTitle={getSubtitle()} />
-        {/* Export buttons for admin */}
+        {/* Export button for admin */}
         {isAdmin && (
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleExportPDF}
-              disabled={exportLoading}
-              className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
-            >
-              {exportLoading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                '📄'
-              )}
-              PDF
-            </button>
-            <button 
-              onClick={handleExportExcel}
-              disabled={exportLoading}
-              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
-            >
-              {exportLoading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                '📊'
-              )}
-              Excel
-            </button>
-          </div>
+          <button 
+            onClick={handleExportExcel}
+            disabled={exportLoading}
+            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+          >
+            {exportLoading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              '📊'
+            )}
+            Excel
+          </button>
         )}
       </div>
 

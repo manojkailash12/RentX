@@ -98,19 +98,7 @@ const ManageCars = () => {
     return 'View your listed cars, update availability, or remove them from the platform.';
   }
 
-  // Export functions
-  const handleExportPDF = async () => {
-    setExportLoading(true);
-    try {
-      await downloadFile('/admin/cars/export/pdf', `cars-report-${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('PDF export error:', error);
-      toast.error('Failed to export PDF');
-    } finally {
-      setExportLoading(false);
-    }
-  };
-
+  // Export function
   const handleExportExcel = async () => {
     setExportLoading(true);
     try {
@@ -145,36 +133,21 @@ const ManageCars = () => {
       <div className="flex justify-between items-start mb-4">
         <Title title={getTitle()} subTitle={getSubtitle()} />
         <div className="flex items-center gap-2">
-          {/* Export buttons for admin */}
+          {/* Export button for admin */}
           {isAdmin && (
-            <>
-              <button 
-                type="button"
-                onClick={handleExportPDF}
-                disabled={exportLoading}
-                className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
-              >
-                {exportLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  '📄'
-                )}
-                PDF
-              </button>
-              <button 
-                type="button"
-                onClick={handleExportExcel}
-                disabled={exportLoading}
-                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
-              >
-                {exportLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  '📊'
-                )}
-                Excel
-              </button>
-            </>
+            <button 
+              type="button"
+              onClick={handleExportExcel}
+              disabled={exportLoading}
+              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+            >
+              {exportLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                '📊'
+              )}
+              Excel
+            </button>
           )}
           <button 
             onClick={() => navigate('/owner/add-car')}
