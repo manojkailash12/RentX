@@ -263,9 +263,9 @@ const Dashboard = () => {
               <p className='text-gray-500 text-sm mb-4'>Admin management tools</p>
               <div className='space-y-2'>
                 <button 
-                  onClick={handleExportPDF}
+                  onClick={handleExportExcel}
                   disabled={exportLoading}
-                  className='w-full text-left px-3 py-2 text-sm bg-red-50 hover:bg-red-100 rounded-md transition-colors disabled:opacity-50'
+                  className='w-full text-left px-3 py-2 text-sm bg-green-50 hover:bg-green-100 rounded-md transition-colors disabled:opacity-50'
                 >
                   📊 Export Excel Report
                 </button>
