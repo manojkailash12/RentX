@@ -575,13 +575,14 @@ const downloadInvoice = async (req, res) => {
     
     const pdfBuffer = await generateBookingInvoice(bookingDetails);
     
-    // For serverless functions, send as base64
+    // For serverless functions, properly handle binary data
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=invoice-${bookingId}.pdf`);
     res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
     
-    // Send buffer directly (works in both local and serverless)
-    res.end(pdfBuffer, 'binary');
+    // Send buffer as base64 for serverless compatibility
+    res.send(pdfBuffer);
   } catch (error) {
     console.log(error.message);
     res.json({ success: false, message: error.message });

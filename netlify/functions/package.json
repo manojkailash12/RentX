@@ -10,12 +10,9 @@
     "multer": "^2.0.1",
     "nodemailer": "^7.0.13",
     "axios": "^1.10.0",
-    "pdfkit": "^0.17.2",
-    "exceljs": "^4.4.0",
-    "html-pdf-node": "^1.0.8",
-    "chrome-aws-lambda": "^10.1.0",
-    "puppeteer-core": "^10.1.0",
     "cloudinary": "^1.41.0",
-    "multer-storage-cloudinary": "^4.0.0"
+    "multer-storage-cloudinary": "^4.0.0",
+    "chrome-aws-lambda": "^10.1.0",
+    "puppeteer-core": "^10.1.0"
   }
 }

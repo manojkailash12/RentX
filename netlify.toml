@@ -10,7 +10,6 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
   external_node_modules = ["sharp", "canvas", "bcrypt", "emitter", "batch", "@mapbox/node-pre-gyp", "cloudinary", "multer-storage-cloudinary", "chrome-aws-lambda", "puppeteer-core"]
-  included_files = ["netlify/functions/node_modules/**"]
 
 [dev]
   command = "vite"

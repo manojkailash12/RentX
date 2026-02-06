@@ -55,3 +55,8 @@ Thumbs.db
 # Local development
 restart-server.bat
 deploy.js
+
+# Exclude local Netlify dev artifacts from deployment
+.netlify/functions-serve/
+.netlify/blobs-serve/
+.netlify/functions-internal/

@@ -1,0 +1,18 @@
+# Exclude local Netlify dev artifacts from deployment
+.netlify/functions-serve/
+.netlify/blobs-serve/
+.netlify/functions-internal/
+.netlify/state.json
+
+# Exclude development files
+restart-server.bat
+restart-clean.bat
+deploy.js
+
+# Exclude source files (only deploy built files)
+src/
+
+# Exclude documentation
+README.md
+DEPLOYMENT-GUIDE.md
+CLOUDINARY-SETUP.md
