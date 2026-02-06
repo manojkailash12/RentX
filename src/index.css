@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+
+@import "tailwindcss";
+
+*{
+    font-family: "Outfit", sans-serif;
+}
+
+/* Hide scrollbars */
+::-webkit-scrollbar {
+    display: none;
+}
+
+html {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+    /* Prevent bounce scrolling on mobile */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+body {
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    /* Prevent bounce scrolling on mobile */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    /* Prevent pull-to-refresh */
+    touch-action: pan-x pan-y;
+}
+
+#root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    /* Prevent bounce scrolling */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure proper viewport handling */
+.h-screen {
+    height: 100vh;
+}
+
+.min-h-screen {
+    min-height: 100vh;
+}
+
+/* Prevent bounce scrolling on all scrollable elements */
+.overflow-auto, .overflow-y-auto, .overflow-x-auto {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar for content areas */
+.overflow-auto::-webkit-scrollbar {
+    width: 6px;
+}
+
+.overflow-auto::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Prevent text selection on UI elements */
+.no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Fix for mobile viewport issues */
+@supports (-webkit-touch-callout: none) {
+    .h-screen {
+        height: -webkit-fill-available;
+    }
+}
+
+@theme {
+    --color-primary: #2563EB;
+    --color-primary-dull: #1F58D8;
+    --color-light: #F1F5F9;
+    --color-borderColor: #c4c7d2;
+}
+
+/* Floating animation for clouds */
+@keyframes float {
+    0%, 100% { 
+        transform: translateY(0px); 
+    }
+    50% { 
+        transform: translateY(-20px); 
+    }
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+    animation: float 6s ease-in-out infinite 2s;
+}
+
+.animate-float-slow {
+    animation: float 8s ease-in-out infinite 1s;
+}
+
+/* Mountain shapes */
+.clip-mountain-1 {
+    clip-path: polygon(0% 100%, 0% 60%, 15% 40%, 30% 50%, 45% 30%, 60% 45%, 75% 35%, 90% 50%, 100% 40%, 100% 100%);
+}
+
+.clip-mountain-2 {
+    clip-path: polygon(0% 100%, 0% 70%, 10% 50%, 25% 60%, 40% 40%, 55% 55%, 70% 45%, 85% 60%, 100% 50%, 100% 100%);
+}
+
+.clip-mountain-3 {
+    clip-path: polygon(0% 100%, 0% 65%, 20% 45%, 35% 55%, 50% 35%, 65% 50%, 80% 40%, 95% 55%, 100% 45%, 100% 100%);
+}

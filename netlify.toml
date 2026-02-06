@@ -1,0 +1,211 @@
+[build]
+  publish = "dist"
+  command = "npm install && npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_VERSION = "10"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = ["sharp", "canvas", "bcrypt", "emitter", "batch", "@mapbox/node-pre-gyp"]
+  included_files = ["netlify/functions/node_modules/**"]
+
+[dev]
+  command = "vite"
+  port = 8888
+  targetPort = 5173
+  publish = "dist"
+  functions = "netlify/functions"
+  framework = "#custom"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# Specific API endpoints only - don't catch React routes
+[[redirects]]
+  from = "/user/register"
+  to = "/.netlify/functions/api/user/register"
+  status = 200
+
+[[redirects]]
+  from = "/user/login"
+  to = "/.netlify/functions/api/user/login"
+  status = 200
+
+[[redirects]]
+  from = "/user/verify-otp"
+  to = "/.netlify/functions/api/user/verify-otp"
+  status = 200
+
+[[redirects]]
+  from = "/user/resend-otp"
+  to = "/.netlify/functions/api/user/resend-otp"
+  status = 200
+
+[[redirects]]
+  from = "/user/data"
+  to = "/.netlify/functions/api/user/data"
+  status = 200
+
+[[redirects]]
+  from = "/user/profile"
+  to = "/.netlify/functions/api/user/profile"
+  status = 200
+
+[[redirects]]
+  from = "/user/profile-image"
+  to = "/.netlify/functions/api/user/profile-image"
+  status = 200
+
+[[redirects]]
+  from = "/user/cars"
+  to = "/.netlify/functions/api/user/cars"
+  status = 200
+
+[[redirects]]
+  from = "/user/roles"
+  to = "/.netlify/functions/api/user/roles"
+  status = 200
+
+[[redirects]]
+  from = "/owner/add-car"
+  to = "/.netlify/functions/api/owner/add-car"
+  status = 200
+
+[[redirects]]
+  from = "/owner/cars"
+  to = "/.netlify/functions/api/owner/cars"
+  status = 200
+
+[[redirects]]
+  from = "/owner/dashboard"
+  to = "/.netlify/functions/api/owner/dashboard"
+  status = 200
+
+[[redirects]]
+  from = "/owner/change-role"
+  to = "/.netlify/functions/api/owner/change-role"
+  status = 200
+
+[[redirects]]
+  from = "/owner/car/*"
+  to = "/.netlify/functions/api/owner/car/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/owner/pending-cars"
+  to = "/.netlify/functions/api/owner/pending-cars"
+  status = 200
+
+[[redirects]]
+  from = "/owner/approve-reject-car"
+  to = "/.netlify/functions/api/owner/approve-reject-car"
+  status = 200
+
+[[redirects]]
+  from = "/owner/toggle-car"
+  to = "/.netlify/functions/api/owner/toggle-car"
+  status = 200
+
+[[redirects]]
+  from = "/owner/delete-car"
+  to = "/.netlify/functions/api/owner/delete-car"
+  status = 200
+
+[[redirects]]
+  from = "/owner/update-image"
+  to = "/.netlify/functions/api/owner/update-image"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/create"
+  to = "/.netlify/functions/api/bookings/create"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/user"
+  to = "/.netlify/functions/api/bookings/user"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/owner"
+  to = "/.netlify/functions/api/bookings/owner"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/change-status"
+  to = "/.netlify/functions/api/bookings/change-status"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/check-availability"
+  to = "/.netlify/functions/api/bookings/check-availability"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/check-car-availability"
+  to = "/.netlify/functions/api/bookings/check-car-availability"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/calculate-distance"
+  to = "/.netlify/functions/api/bookings/calculate-distance"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/invoice/*"
+  to = "/.netlify/functions/api/bookings/invoice/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/admin/dashboard"
+  to = "/.netlify/functions/api/admin/dashboard"
+  status = 200
+
+[[redirects]]
+  from = "/admin/earnings/*"
+  to = "/.netlify/functions/api/admin/earnings/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/admin/users"
+  to = "/.netlify/functions/api/admin/users"
+  status = 200
+
+[[redirects]]
+  from = "/admin/bookings"
+  to = "/.netlify/functions/api/admin/bookings"
+  status = 200
+
+[[redirects]]
+  from = "/uploads/*"
+  to = "/.netlify/functions/api/uploads/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Max-Age = "86400"
+
+[[headers]]
+  for = "/uploads/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=3600"
