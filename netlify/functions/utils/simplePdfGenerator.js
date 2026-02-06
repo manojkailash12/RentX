@@ -3,19 +3,19 @@ const fs = require('fs');
 /**
  * PDF generator that works both locally and on Netlify
  * - Local: Uses system Chrome
- * - Netlify: Uses chrome-aws-lambda (serverless Chrome)
+ * - Netlify: Uses @sparticuz/chromium (serverless Chrome with all dependencies)
  */
 
 const isNetlify = process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME;
 
 const getChromePath = () => {
-  // On Netlify/AWS Lambda, chrome-aws-lambda provides the path
+  // On Netlify/AWS Lambda, @sparticuz/chromium provides the path
   if (isNetlify) {
     try {
-      const chromium = require('chrome-aws-lambda');
+      const chromium = require('@sparticuz/chromium');
       return chromium.executablePath;
     } catch (error) {
-      console.error('chrome-aws-lambda not available:', error.message);
+      console.error('@sparticuz/chromium not available:', error.message);
       throw new Error('PDF generation not available on this platform');
     }
   }
@@ -51,17 +51,17 @@ async function generatePdfFromHtml(htmlContent, options = {}) {
 }
 
 /**
- * Generate PDF on Netlify using chrome-aws-lambda
+ * Generate PDF on Netlify using @sparticuz/chromium
  */
 async function generatePdfNetlify(htmlContent, options = {}) {
   try {
-    const chromium = require('chrome-aws-lambda');
+    const chromium = require('@sparticuz/chromium');
     const puppeteer = require('puppeteer-core');
     
     const browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
+      executablePath: await chromium.executablePath(),
       headless: chromium.headless,
     });
     
