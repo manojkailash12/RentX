@@ -14,6 +14,8 @@
     "exceljs": "^4.4.0",
     "html-pdf-node": "^1.0.8",
     "chrome-aws-lambda": "^10.1.0",
-    "puppeteer-core": "^10.1.0"
+    "puppeteer-core": "^10.1.0",
+    "cloudinary": "^1.41.0",
+    "multer-storage-cloudinary": "^4.0.0"
   }
 }

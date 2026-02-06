@@ -70,7 +70,7 @@ const {
 
 // Import middleware
 const { protect } = require('./middleware/auth.js');
-const upload = require('./middleware/multer.js');
+const { upload, isCloudinaryConfigured } = require('./middleware/multerCloudinary.js');
 
 const app = express();
 

@@ -65,39 +65,42 @@ const addCar = async (req, res) => {
     console.log('📁 File received:', { 
       filename: imageFile.filename, 
       size: imageFile.size, 
-      mimetype: imageFile.mimetype 
+      mimetype: imageFile.mimetype,
+      cloudinary: imageFile.path ? 'Cloudinary URL' : 'Local file'
     });
 
-    // Create uploads directory based on environment
-    const uploadsDir = process.env.NETLIFY 
-      ? '/tmp/uploads/cars' 
-      : path.join(process.cwd(), 'uploads', 'cars');
-      
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    // Handle file storage
+    // Get image URL - Cloudinary provides it in file.path, local storage uses filename
     let imageUrl;
     
-    if (process.env.NETLIFY) {
-      // In Netlify, use the uploaded file directly
+    if (imageFile.path && imageFile.path.startsWith('http')) {
+      // Cloudinary URL
+      imageUrl = imageFile.path;
+      console.log('☁️ Cloudinary image URL:', imageUrl);
+    } else {
+      // Fallback to local storage (development only)
+      const uploadsDir = process.env.NETLIFY 
+        ? '/tmp/uploads/cars' 
+        : path.join(process.cwd(), 'uploads', 'cars');
+        
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
       const fileName = imageFile.filename || `car_${Date.now()}_${Math.random().toString(36).substr(2, 9)}${path.extname(imageFile.originalname)}`;
-      
-      // Save file to /tmp/uploads/cars
       const filePath = path.join(uploadsDir, fileName);
-      if (imageFile.path) {
+      
+      if (imageFile.buffer) {
+        fs.writeFileSync(filePath, imageFile.buffer);
+      } else if (imageFile.path) {
         fs.renameSync(imageFile.path, filePath);
       }
       
-      imageUrl = `/.netlify/functions/api/uploads/cars/${fileName}`;
-      console.log('☁️ Netlify image URL:', imageUrl);
-      console.log('☁️ File saved to:', filePath);
-    } else {
-      // Local development - use relative path that works with Netlify Dev
-      const fileExtension = path.extname(imageFile.originalname);
-      const fileName = `car_${Date.now()}_${Math.random().toString(36).substr(2, 9)}${fileExtension}`;
-      const filePath = path.join(uploadsDir, fileName);
+      imageUrl = process.env.NETLIFY 
+        ? `/.netlify/functions/api/uploads/cars/${fileName}`
+        : `/uploads/cars/${fileName}`;
+      
+      console.log('💾 Local image URL:', imageUrl);
+    }
 
       // Move uploaded file to permanent location
       fs.renameSync(imageFile.path, filePath);
