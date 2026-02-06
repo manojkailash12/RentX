@@ -155,10 +155,16 @@ const exportEarningsPDF = async (req, res) => {
       size: 'A4'
     });
     
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=earnings-report-${year}.pdf`);
-    
-    doc.pipe(res);
+    // Collect PDF data in buffer
+    const buffers = [];
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=earnings-report-${year}.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.end(pdfBuffer, 'binary');
+    });
     
     // Set font to Courier to avoid Helvetica loading issues
     doc.font('Courier');
@@ -320,15 +326,19 @@ const exportCarsPDF = async (req, res) => {
       size: 'A4'
     });
     
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=cars-report-${new Date().toISOString().split('T')[0]}.pdf`);
-    
-    doc.pipe(res);
+    // Collect PDF data in buffer
+    const buffers = [];
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=cars-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.end(pdfBuffer, 'binary');
+    });
     
     // Set font to Courier to avoid Helvetica loading issues
     doc.font('Courier');
-    
-    doc.pipe(res);
     
     // Title
     doc.fontSize(20).text('Car Rental - Cars Report', { align: 'center' });
@@ -455,10 +465,16 @@ const exportBookingsPDF = async (req, res) => {
       size: 'A4'
     });
     
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=bookings-report-${new Date().toISOString().split('T')[0]}.pdf`);
-    
-    doc.pipe(res);
+    // Collect PDF data in buffer
+    const buffers = [];
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=bookings-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.end(pdfBuffer, 'binary');
+    });
     
     // Set font to Courier to avoid Helvetica loading issues
     doc.font('Courier');

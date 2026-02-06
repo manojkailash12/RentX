@@ -102,14 +102,6 @@ const addCar = async (req, res) => {
       console.log('💾 Local image URL:', imageUrl);
     }
 
-      // Move uploaded file to permanent location
-      fs.renameSync(imageFile.path, filePath);
-
-      // Use relative path for local development (works with Netlify Dev on port 8888)
-      imageUrl = `/uploads/cars/${fileName}`;
-      console.log('🏠 Local image URL:', imageUrl);
-    }
-
     const isApproved = role === 'admin';
     const ownerType = role === 'admin' ? 'admin' : 'user';
     
