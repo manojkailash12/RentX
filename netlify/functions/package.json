@@ -12,7 +12,6 @@
     "axios": "^1.10.0",
     "cloudinary": "^1.41.0",
     "multer-storage-cloudinary": "^4.0.0",
-    "@sparticuz/chromium": "^123.0.1",
-    "puppeteer-core": "^23.0.2"
+    "pdfmake": "^0.2.10"
   }
 }
