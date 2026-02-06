@@ -534,7 +534,11 @@ app.use((req, res) => {
   });
 });
 
-// Export the serverless function
+// Export the serverless function with proper binary handling
 module.exports.handler = serverless(app, {
-  binary: ['image/*', 'application/pdf']
+  binary: true, // Enable binary support for all content types
+  request: (request, event, context) => {
+    // Pass through binary data
+    request.isBase64Encoded = event.isBase64Encoded;
+  }
 });
