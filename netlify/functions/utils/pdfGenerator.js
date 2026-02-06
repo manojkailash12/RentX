@@ -1,4 +1,4 @@
-const { generateBookingInvoicePDF } = require('./pdfmakePdfGenerator.js');
+const { generateBookingInvoicePDF } = require('./pdfkitGenerator.js');
 
 // Backward compatibility export
 const generateBookingInvoice = async (bookingDetails) => {
