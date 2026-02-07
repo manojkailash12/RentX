@@ -536,7 +536,7 @@ app.use((req, res) => {
 
 // Export the serverless function with proper binary handling
 module.exports.handler = serverless(app, {
-  binary: true, // Enable binary support for all content types
+  binary: ['application/pdf', 'image/*'], // Specify binary MIME types
   request: (request, event, context) => {
     // Pass through binary data
     request.isBase64Encoded = event.isBase64Encoded;

@@ -525,7 +525,7 @@ const downloadInvoice = async (req, res) => {
       .populate('carId car userId user ownerId owner');
     
     if (!booking) {
-      return res.json({ success: false, message: "Booking not found" });
+      return res.status(404).json({ success: false, message: "Booking not found" });
     }
     
     // Check if user is authorized to download this invoice
@@ -536,7 +536,7 @@ const downloadInvoice = async (req, res) => {
     const isAdmin = req.user.role === 'admin';
     
     if (!isBookingUser && !isOwner && !isAdmin) {
-      return res.json({ success: false, message: "Unauthorized" });
+      return res.status(403).json({ success: false, message: "Unauthorized" });
     }
     
     // Get car and user data (handle both new and old field names)
@@ -576,51 +576,22 @@ const downloadInvoice = async (req, res) => {
     
     const pdfBuffer = await generateBookingInvoice(bookingDetails);
     
-    // Detect serverless environment and handle binary data appropriately
-    const isServerless = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY;
+    // Set headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${bookingId}.pdf`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
     
-    if (isServerless) {
-      // Serverless: Return Base64-encoded binary with proper flag
-      // This is required for AWS Lambda/Netlify Functions to handle binary data correctly
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename=invoice-${bookingId}.pdf`,
-          'Cache-Control': 'no-cache',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: pdfBuffer.toString('base64'),
-        isBase64Encoded: true
-      };
-    } else {
-      // Local Express: Send buffer directly
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=invoice-${bookingId}.pdf`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      res.setHeader('Cache-Control', 'no-cache');
-      res.send(pdfBuffer);
-    }
+    // Send the PDF buffer - serverless-http will handle Base64 encoding automatically
+    res.send(pdfBuffer);
+    
   } catch (error) {
     console.error('PDF download error:', error.message);
-    
-    const isServerless = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY;
-    
-    if (isServerless) {
-      return {
-        statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({ 
-          success: false, 
-          message: 'Failed to generate invoice. Please try again later.' 
-        })
-      };
-    } else {
-      res.json({ success: false, message: error.message });
-    }
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to generate invoice. Please try again later.' 
+    });
   }
 };
 module.exports = {

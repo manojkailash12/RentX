@@ -57,6 +57,16 @@ const MyBookings = () => {
     setImageError(prev => ({ ...prev, [bookingId]: true }))
   }
 
+  const getCarImageSrc = (booking) => {
+    const car = getCarData(booking)
+    // Only show fallback if there was an error loading the image
+    if (imageError[booking._id]) {
+      return assets.carIconColored
+    }
+    // Return the actual car image URL
+    return car.image || assets.carIconColored
+  }
+
   const getCarData = (booking) => {
     return booking.carId || booking.car
   }
@@ -134,7 +144,7 @@ const MyBookings = () => {
                   <div className='md:col-span-1'>
                     <div className='rounded-md overflow-hidden mb-3'>
                       <img 
-                        src={imageError[booking._id] ? assets.carIconColored : car.image} 
+                        src={getCarImageSrc(booking)} 
                         alt={`${car.brand} ${car.model}`}
                         className='w-full h-auto aspect-video object-cover' 
                         onError={() => handleImageError(booking._id, car.image)}
