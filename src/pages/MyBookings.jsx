@@ -12,6 +12,9 @@ const MyBookings = () => {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(false)
   const [imageError, setImageError] = useState({})
+  const [selectedBooking, setSelectedBooking] = useState(null)
+  const [cancellingBookingId, setCancellingBookingId] = useState(null)
+  const [resendingInvoiceId, setResendingInvoiceId] = useState(null)
 
   const fetchMyBookings = async () => {
     try {
@@ -50,6 +53,56 @@ const MyBookings = () => {
       console.error('Invoice download error:', error)
       toast.error('Failed to download invoice')
     }
+  }
+
+  const cancelBooking = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      setCancellingBookingId(bookingId)
+      const { data } = await axios.post(`/bookings/cancel/${bookingId}`)
+      
+      if (data.success) {
+        toast.success(data.message)
+        // Refresh bookings list
+        fetchMyBookings()
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      console.error('Cancel booking error:', error)
+      toast.error(error.response?.data?.message || 'Failed to cancel booking')
+    } finally {
+      setCancellingBookingId(null)
+    }
+  }
+
+  const resendInvoice = async (bookingId) => {
+    try {
+      setResendingInvoiceId(bookingId)
+      const { data } = await axios.post(`/bookings/resend-invoice/${bookingId}`)
+      
+      if (data.success) {
+        toast.success(data.message)
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      console.error('Resend invoice error:', error)
+      toast.error(error.response?.data?.message || 'Failed to send invoice')
+    } finally {
+      setResendingInvoiceId(null)
+    }
+  }
+
+  const viewBookingDetails = (booking) => {
+    setSelectedBooking(booking)
+  }
+
+  const closeBookingDetails = () => {
+    setSelectedBooking(null)
   }
 
   const handleImageError = (bookingId, imageUrl) => {
@@ -157,6 +210,16 @@ const MyBookings = () => {
                         User Listed
                       </p>
                     )}
+                    {booking.isCarReplaced && (
+                      <div className='mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg'>
+                        <p className='text-xs text-yellow-800 font-semibold flex items-center gap-1'>
+                          🔄 Car Replaced
+                        </p>
+                        <p className='text-xs text-yellow-700 mt-1'>
+                          This vehicle was replaced by admin
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* booking info */}
@@ -235,14 +298,45 @@ const MyBookings = () => {
                     <div className='flex flex-col gap-2'>
                       <button
                         onClick={() => downloadInvoice(booking._id)}
-                        className='px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dull transition-colors text-sm'
+                        className='px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dull transition-colors text-sm flex items-center justify-center gap-2'
                       >
                         📄 Download Invoice
                       </button>
                       
+                      <button
+                        onClick={() => resendInvoice(booking._id)}
+                        disabled={resendingInvoiceId === booking._id}
+                        className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
+                      >
+                        {resendingInvoiceId === booking._id ? '⏳ Sending...' : '📧 Resend Invoice'}
+                      </button>
+
+                      <button
+                        onClick={() => viewBookingDetails(booking)}
+                        className='px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm flex items-center justify-center gap-2'
+                      >
+                        👁️ View Details
+                      </button>
+
+                      {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                        <button
+                          onClick={() => cancelBooking(booking._id)}
+                          disabled={cancellingBookingId === booking._id}
+                          className='px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
+                        >
+                          {cancellingBookingId === booking._id ? '⏳ Cancelling...' : '❌ Cancel Booking'}
+                        </button>
+                      )}
+                      
                       {booking.status === 'pending' && (
-                        <p className='text-xs text-yellow-600 text-center'>
+                        <p className='text-xs text-yellow-600 text-center mt-1'>
                           Awaiting confirmation
+                        </p>
+                      )}
+
+                      {booking.status === 'cancelled' && (
+                        <p className='text-xs text-red-600 text-center mt-1 font-medium'>
+                          Booking Cancelled
                         </p>
                       )}
                     </div>
@@ -252,6 +346,202 @@ const MyBookings = () => {
             })
         )}
       </div>
+
+      {/* Booking Details View - In-App */}
+      {selectedBooking && (
+        <div className='fixed inset-0 bg-white z-50 overflow-y-auto'>
+          {/* Header with Back Button */}
+          <div className='sticky top-0 bg-white border-b shadow-sm px-6 py-4 flex items-center gap-4'>
+            <button 
+              onClick={closeBookingDetails} 
+              className='flex items-center gap-2 text-gray-600 hover:text-primary transition-colors'
+            >
+              <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 19l-7-7 7-7' />
+              </svg>
+              <span className='font-medium'>Back</span>
+            </button>
+            <h2 className='text-xl font-semibold flex-1'>Booking Details</h2>
+            <button 
+              onClick={closeBookingDetails}
+              className='text-gray-500 hover:text-gray-700 text-2xl'
+            >
+              &times;
+            </button>
+          </div>
+          
+          <div className='px-6 md:px-16 lg:px-24 xl:px-32 2xl:px-48 py-8 space-y-6 max-w-4xl mx-auto'>
+            {/* Booking Info */}
+            <div className='bg-gray-50 p-6 rounded-lg border border-gray-200'>
+              <h3 className='font-semibold mb-4 text-primary text-lg flex items-center gap-2'>
+                <span className='w-2 h-2 bg-primary rounded-full'></span>
+                Booking Information
+              </h3>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
+                <div className='flex justify-between md:block'>
+                  <span className='text-gray-600'>Booking ID:</span> 
+                  <span className='font-medium ml-2 md:ml-0 md:block'>{selectedBooking.bookingId}</span>
+                </div>
+                {selectedBooking.invoiceNumber && (
+                  <div className='flex justify-between md:block'>
+                    <span className='text-gray-600'>Invoice:</span> 
+                    <span className='font-medium ml-2 md:ml-0 md:block'>{selectedBooking.invoiceNumber}</span>
+                  </div>
+                )}
+                <div className='flex justify-between md:block'>
+                  <span className='text-gray-600'>Status:</span> 
+                  <span className={`font-medium ml-2 md:ml-0 md:block ${
+                    selectedBooking.status === 'confirmed' ? 'text-green-600' : 
+                    selectedBooking.status === 'pending' ? 'text-yellow-600' :
+                    selectedBooking.status === 'completed' ? 'text-blue-600' :
+                    'text-red-600'
+                  }`}>{selectedBooking.status}</span>
+                </div>
+                <div className='flex justify-between md:block'>
+                  <span className='text-gray-600'>Booked On:</span> 
+                  <span className='font-medium ml-2 md:ml-0 md:block'>{new Date(selectedBooking.createdAt).toLocaleDateString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Car Info */}
+            <div className='bg-gray-50 p-6 rounded-lg border border-gray-200'>
+              <h3 className='font-semibold mb-4 text-primary text-lg flex items-center gap-2'>
+                <span className='w-2 h-2 bg-primary rounded-full'></span>
+                Vehicle Details
+              </h3>
+              
+              {selectedBooking.isCarReplaced && (
+                <div className='mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded'>
+                  <div className='flex items-start gap-2'>
+                    <span className='text-2xl'>🔄</span>
+                    <div className='flex-1'>
+                      <h4 className='font-semibold text-yellow-800 mb-2'>Car Replacement Notice</h4>
+                      <p className='text-sm text-yellow-700 mb-2'>
+                        Your originally booked vehicle has been replaced with an alternative vehicle.
+                      </p>
+                      <div className='bg-white p-3 rounded mt-2'>
+                        <p className='text-xs text-gray-600 font-semibold mb-1'>Reason for Replacement:</p>
+                        <p className='text-sm text-gray-800'>{selectedBooking.replacementReason}</p>
+                      </div>
+                      {selectedBooking.replacedAt && (
+                        <p className='text-xs text-yellow-600 mt-2'>
+                          Replaced on: {new Date(selectedBooking.replacedAt).toLocaleString('en-IN')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
+                <div className='flex justify-between md:block'>
+                  <span className='text-gray-600'>Vehicle:</span> 
+                  <span className='font-medium ml-2 md:ml-0 md:block'>{getCarData(selectedBooking).brand} {getCarData(selectedBooking).model}</span>
+                </div>
+                <div className='flex justify-between md:block'>
+                  <span className='text-gray-600'>Year:</span> 
+                  <span className='font-medium ml-2 md:ml-0 md:block'>{getCarData(selectedBooking).year}</span>
+                </div>
+                <div className='flex justify-between md:block'>
+                  <span className='text-gray-600'>Category:</span> 
+                  <span className='font-medium ml-2 md:ml-0 md:block'>{getCarData(selectedBooking).category}</span>
+                </div>
+                <div className='flex justify-between md:block'>
+                  <span className='text-gray-600'>Registration:</span> 
+                  <span className='font-medium ml-2 md:ml-0 md:block'>{getCarData(selectedBooking).registration_number || 'N/A'}</span>
+                </div>
+              </div>
+              
+              {selectedBooking.isCarReplaced && selectedBooking.originalCarId && (
+                <div className='mt-4 pt-4 border-t border-gray-300'>
+                  <p className='text-xs text-gray-500 font-semibold mb-2'>Original Vehicle (Replaced):</p>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-2 text-sm bg-gray-100 p-3 rounded'>
+                    <div className='flex justify-between md:block'>
+                      <span className='text-gray-600'>Vehicle:</span> 
+                      <span className='font-medium ml-2 md:ml-0 md:block line-through text-gray-500'>
+                        {selectedBooking.originalCarId.brand} {selectedBooking.originalCarId.model}
+                      </span>
+                    </div>
+                    <div className='flex justify-between md:block'>
+                      <span className='text-gray-600'>Year:</span> 
+                      <span className='font-medium ml-2 md:ml-0 md:block line-through text-gray-500'>
+                        {selectedBooking.originalCarId.year}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Trip Info */}
+            <div className='bg-gray-50 p-6 rounded-lg border border-gray-200'>
+              <h3 className='font-semibold mb-4 text-primary text-lg flex items-center gap-2'>
+                <span className='w-2 h-2 bg-primary rounded-full'></span>
+                Trip Details
+              </h3>
+              <div className='space-y-4 text-sm'>
+                <div className='flex justify-between'>
+                  <span className='text-gray-600'>Pickup:</span> 
+                  <span className='font-medium text-right'>{selectedBooking.pickupLocation} ({new Date(selectedBooking.pickupDate).toLocaleString('en-IN')})</span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='text-gray-600'>Drop-off:</span> 
+                  <span className='font-medium text-right'>{selectedBooking.dropLocation} ({new Date(selectedBooking.returnDate).toLocaleString('en-IN')})</span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='text-gray-600'>Duration:</span> 
+                  <span className='font-medium'>{calculateDays(selectedBooking.pickupDate, selectedBooking.returnDate)} days</span>
+                </div>
+                {selectedBooking.distance && (
+                  <div className='flex justify-between'>
+                    <span className='text-gray-600'>Distance:</span> 
+                    <span className='font-medium'>{selectedBooking.distance} km</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Info */}
+            <div className='bg-gray-50 p-6 rounded-lg border border-gray-200'>
+              <h3 className='font-semibold mb-4 text-primary text-lg flex items-center gap-2'>
+                <span className='w-2 h-2 bg-primary rounded-full'></span>
+                Payment Details
+              </h3>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
+                <div className='flex justify-between md:block'>
+                  <span className='text-gray-600'>Total Amount:</span> 
+                  <span className='font-medium text-lg text-primary ml-2 md:ml-0 md:block'>₹{(selectedBooking.totalAmount || selectedBooking.price).toLocaleString('en-IN')}</span>
+                </div>
+                <div className='flex justify-between md:block'>
+                  <span className='text-gray-600'>Payment Method:</span> 
+                  <span className='font-medium capitalize ml-2 md:ml-0 md:block'>{selectedBooking.paymentMethod || 'Cash on Delivery'}</span>
+                </div>
+                <div className='flex justify-between md:block'>
+                  <span className='text-gray-600'>Payment Status:</span> 
+                  <span className={`font-medium ml-2 md:ml-0 md:block ${getPaymentStatusDisplay(selectedBooking).color}`}>{getPaymentStatusDisplay(selectedBooking).text}</span>
+                </div>
+                {selectedBooking.pricePerDay && (
+                  <div className='flex justify-between md:block'>
+                    <span className='text-gray-600'>Price/Day:</span> 
+                    <span className='font-medium ml-2 md:ml-0 md:block'>₹{selectedBooking.pricePerDay.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className='flex flex-col gap-3 sticky bottom-0 bg-white pt-4 pb-6 border-t'>
+              <button 
+                onClick={closeBookingDetails} 
+                className='w-full px-4 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors font-medium'
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   )
 }

@@ -392,6 +392,7 @@ const getUserBookings = async (req, res) => {
       ]
     })
     .populate("carId car") // populate both new and old field names
+    .populate("originalCarId") // populate replacement car info
     .sort({createdAt: -1});
     
     res.json({success: true, bookings});
@@ -521,10 +522,13 @@ const downloadInvoice = async (req, res) => {
     const { bookingId } = req.params;
     const { _id } = req.user;
     
+    console.log('📄 PDF Download request for booking:', bookingId);
+    
     const booking = await Booking.findById(bookingId)
       .populate('carId car userId user ownerId owner');
     
     if (!booking) {
+      console.error('❌ Booking not found:', bookingId);
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
     
@@ -536,12 +540,19 @@ const downloadInvoice = async (req, res) => {
     const isAdmin = req.user.role === 'admin';
     
     if (!isBookingUser && !isOwner && !isAdmin) {
+      console.error('❌ Unauthorized access attempt by user:', _id);
       return res.status(403).json({ success: false, message: "Unauthorized" });
     }
     
     // Get car and user data (handle both new and old field names)
     const carData = booking.carId || booking.car;
     const userData = booking.userId || booking.user;
+    
+    console.log('✅ Generating PDF for booking:', {
+      bookingId: booking._id,
+      user: userData.name,
+      car: `${carData.brand} ${carData.model}`
+    });
     
     const bookingDetails = {
       bookingId: booking._id,
@@ -574,7 +585,10 @@ const downloadInvoice = async (req, res) => {
       createdAt: booking.createdAt
     };
     
+    // Generate PDF using PDFKit (via pdfGenerator.js)
     const pdfBuffer = await generateBookingInvoice(bookingDetails);
+    
+    console.log('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes');
     
     // Set headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
@@ -582,18 +596,158 @@ const downloadInvoice = async (req, res) => {
     res.setHeader('Content-Length', pdfBuffer.length);
     res.setHeader('Cache-Control', 'no-cache');
     
-    // Send the PDF buffer - serverless-http will handle Base64 encoding automatically
-    res.send(pdfBuffer);
+    // Send the PDF buffer - use res.end() for binary data
+    // This ensures proper binary handling in both Express and serverless environments
+    res.end(pdfBuffer, 'binary');
+    
+    console.log('✅ PDF sent to client');
     
   } catch (error) {
-    console.error('PDF download error:', error.message);
+    console.error('❌ PDF download error:', error.message);
     console.error('Error stack:', error.stack);
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to generate invoice. Please try again later.' 
+      message: 'Failed to generate invoice. Please try again later.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
+
+// API for user to cancel their own booking
+const cancelUserBooking = async (req, res) => {
+  try {
+    const { _id } = req.user;
+    const { bookingId } = req.params;
+    
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.json({ success: false, message: "Booking not found" });
+    }
+    
+    // Check if user owns this booking
+    const isBookingUser = booking.userId?.toString() === _id.toString() || 
+                         booking.user?.toString() === _id.toString();
+    
+    if (!isBookingUser) {
+      return res.json({ success: false, message: "Unauthorized to cancel this booking" });
+    }
+    
+    // Check if booking can be cancelled
+    if (booking.status === 'cancelled') {
+      return res.json({ success: false, message: "Booking is already cancelled" });
+    }
+    
+    if (booking.status === 'completed') {
+      return res.json({ success: false, message: "Cannot cancel completed booking" });
+    }
+    
+    // Update booking status to cancelled
+    booking.status = 'cancelled';
+    await booking.save();
+    
+    // Car becomes available immediately (no need to update car availability as it's handled by date-based availability check)
+    
+    console.log(`✅ Booking ${bookingId} cancelled by user ${_id}`);
+    
+    res.json({ 
+      success: true, 
+      message: "Booking cancelled successfully. The car is now available for others to book." 
+    });
+  } catch (error) {
+    console.error('Cancel booking error:', error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// API to resend invoice to user's email
+const resendInvoiceEmail = async (req, res) => {
+  try {
+    const { _id } = req.user;
+    const { bookingId } = req.params;
+    
+    console.log('📧 Resend invoice request for booking:', bookingId);
+    
+    const booking = await Booking.findById(bookingId)
+      .populate('carId car userId user ownerId owner');
+    
+    if (!booking) {
+      console.error('❌ Booking not found:', bookingId);
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+    
+    // Check if user owns this booking
+    const isBookingUser = booking.userId?._id.toString() === _id.toString() || 
+                         booking.user?._id.toString() === _id.toString();
+    const isOwner = booking.ownerId?._id.toString() === _id.toString() || 
+                   booking.owner?._id.toString() === _id.toString();
+    const isAdmin = req.user.role === 'admin';
+    
+    if (!isBookingUser && !isOwner && !isAdmin) {
+      console.error('❌ Unauthorized access attempt by user:', _id);
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+    
+    // Get car and user data
+    const carData = booking.carId || booking.car;
+    const userData = booking.userId || booking.user;
+    
+    const bookingDetails = {
+      bookingId: booking.bookingId || booking._id,
+      invoiceNumber: booking.invoiceNumber || `INV${Date.now().toString().slice(-3)}`,
+      userName: userData.name,
+      userEmail: userData.email,
+      userPhone: userData.phone || userData.phoneNumber || 'N/A',
+      carName: carData.name || `${carData.brand} ${carData.model}`,
+      carModel: carData.model,
+      carBrand: carData.brand,
+      carType: carData.category || carData.car_type || 'N/A',
+      carYear: carData.year || 'N/A',
+      carRegistration: carData.registration_number || carData.registeration_number || 'N/A',
+      pickupLocation: booking.pickupLocation || 'N/A',
+      pickupCity: booking.pickupCity || 'N/A',
+      dropLocation: booking.dropLocation || 'N/A',
+      dropCity: booking.dropCity || 'N/A',
+      pickupDate: booking.pickupDate,
+      returnDate: booking.returnDate,
+      totalDays: booking.totalDays || Math.ceil((new Date(booking.returnDate) - new Date(booking.pickupDate)) / (1000 * 60 * 60 * 24)),
+      distance: booking.distance || 0,
+      pricingType: booking.pricingType || 'daily',
+      pricePerDay: booking.pricePerDay || carData.pricePerDay,
+      pricePerKm: booking.pricePerKm || 15,
+      totalAmount: booking.totalAmount || booking.price,
+      ownerEarnings: booking.ownerEarnings || booking.totalAmount || booking.price,
+      commissionRate: booking.commissionRate || 0,
+      paymentMethod: booking.paymentMethod || 'cash',
+      paymentStatus: booking.paymentStatus || 'pay_at_dropoff',
+      status: booking.status,
+      createdAt: booking.createdAt
+    };
+    
+    // Generate PDF
+    const pdfBuffer = await generateBookingInvoice(bookingDetails);
+    
+    // Send email with PDF attachment
+    const { sendBookingConfirmation } = require('../utils/emailService');
+    await sendBookingConfirmation(userData.email, bookingDetails, pdfBuffer);
+    
+    console.log('✅ Invoice email sent successfully to:', userData.email);
+    
+    res.json({ 
+      success: true, 
+      message: `Invoice sent successfully to ${userData.email}` 
+    });
+    
+  } catch (error) {
+    console.error('❌ Resend invoice error:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to send invoice. Please try again later.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   checkSpecificCarAvailability,
   checkAvailabilityOfCar,
@@ -603,5 +757,7 @@ module.exports = {
   changeBookingStatus,
   updatePaymentStatus,
   calculateDistanceAPI,
-  downloadInvoice
+  downloadInvoice,
+  cancelUserBooking,
+  resendInvoiceEmail
 };

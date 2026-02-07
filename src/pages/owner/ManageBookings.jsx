@@ -12,6 +12,12 @@ const ManageBookings = () => {
   const [loading, setLoading] = useState(false)
   const [exportLoading, setExportLoading] = useState(false)
   const [filter, setFilter] = useState('all')
+  const [showReplaceModal, setShowReplaceModal] = useState(false)
+  const [selectedBooking, setSelectedBooking] = useState(null)
+  const [availableCars, setAvailableCars] = useState([])
+  const [selectedNewCar, setSelectedNewCar] = useState('')
+  const [replacementReason, setReplacementReason] = useState('')
+  const [replaceLoading, setReplaceLoading] = useState(false)
 
   const fetchOwnerBookings = async () => {
     try {
@@ -59,6 +65,65 @@ const ManageBookings = () => {
     } catch (error) {
       toast.error('Failed to download invoice')
     }
+  }
+
+  const openReplaceModal = async (booking) => {
+    try {
+      setSelectedBooking(booking)
+      setShowReplaceModal(true)
+      
+      // Fetch available cars for replacement
+      const { data } = await axios.get(`/admin/available-cars?bookingId=${booking._id}`)
+      if (data.success) {
+        setAvailableCars(data.cars)
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error('Failed to fetch available cars')
+    }
+  }
+
+  const handleReplaceCar = async () => {
+    if (!selectedNewCar) {
+      toast.error('Please select a replacement car')
+      return
+    }
+    if (!replacementReason.trim()) {
+      toast.error('Please provide a reason for replacement')
+      return
+    }
+
+    try {
+      setReplaceLoading(true)
+      const { data } = await axios.post('/admin/replace-car', {
+        bookingId: selectedBooking._id,
+        newCarId: selectedNewCar,
+        reason: replacementReason
+      })
+
+      if (data.success) {
+        toast.success('Car replaced successfully! User has been notified via email.')
+        setShowReplaceModal(false)
+        setSelectedBooking(null)
+        setSelectedNewCar('')
+        setReplacementReason('')
+        fetchOwnerBookings()
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to replace car')
+    } finally {
+      setReplaceLoading(false)
+    }
+  }
+
+  const closeReplaceModal = () => {
+    setShowReplaceModal(false)
+    setSelectedBooking(null)
+    setSelectedNewCar('')
+    setReplacementReason('')
   }
 
   const getCarData = (booking) => {
@@ -319,6 +384,16 @@ const ManageBookings = () => {
                               📄 PDF
                             </button>
                             
+                            {isAdmin && booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                              <button
+                                onClick={() => openReplaceModal(booking)}
+                                className='px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs hover:bg-purple-200 transition-colors'
+                                title='Replace Car'
+                              >
+                                🔄 Replace
+                              </button>
+                            )}
+                            
                             {booking.status === 'confirmed' && (
                               <button
                                 onClick={() => changeBookingStatus(booking._id, 'completed')}
@@ -380,6 +455,115 @@ const ManageBookings = () => {
           </div>
         )}
       </div>
+
+      {/* Replace Car Modal */}
+      {showReplaceModal && selectedBooking && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto'>
+            <div className='p-6'>
+              <div className='flex justify-between items-center mb-4'>
+                <h2 className='text-xl font-bold text-gray-800'>🔄 Replace Car</h2>
+                <button onClick={closeReplaceModal} className='text-gray-500 hover:text-gray-700'>
+                  <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
+                  </svg>
+                </button>
+              </div>
+
+              <div className='mb-4 p-4 bg-gray-50 rounded-lg'>
+                <h3 className='font-semibold text-gray-700 mb-2'>Current Booking</h3>
+                <p className='text-sm text-gray-600'>
+                  <strong>Booking ID:</strong> {selectedBooking.bookingId || selectedBooking._id}
+                </p>
+                <p className='text-sm text-gray-600'>
+                  <strong>Current Car:</strong> {getCarData(selectedBooking)?.brand} {getCarData(selectedBooking)?.model}
+                </p>
+                <p className='text-sm text-gray-600'>
+                  <strong>Customer:</strong> {getUserData(selectedBooking)?.name}
+                </p>
+              </div>
+
+              <div className='mb-4'>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Select Replacement Car *
+                </label>
+                <select
+                  value={selectedNewCar}
+                  onChange={(e) => setSelectedNewCar(e.target.value)}
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary'
+                >
+                  <option value=''>-- Select a car --</option>
+                  {availableCars.map((car) => (
+                    <option key={car._id} value={car._id}>
+                      {car.brand} {car.model} ({car.year}) - {car.category} - ₹{car.pricePerDay}/day
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedNewCar && (
+                <div className='mb-4 p-4 bg-green-50 rounded-lg border border-green-200'>
+                  {(() => {
+                    const car = availableCars.find(c => c._id === selectedNewCar)
+                    return car ? (
+                      <div className='flex gap-4'>
+                        <img
+                          src={car.image || assets.car_image1}
+                          alt={`${car.brand} ${car.model}`}
+                          className='h-20 w-20 rounded-lg object-cover'
+                          onError={(e) => { e.target.src = assets.car_image1 }}
+                        />
+                        <div className='flex-1'>
+                          <h4 className='font-semibold text-gray-800'>{car.brand} {car.model}</h4>
+                          <p className='text-sm text-gray-600'>Year: {car.year} | Category: {car.category}</p>
+                          <p className='text-sm text-gray-600'>Seats: {car.seating_capacity} | {car.transmission} | {car.fuel_type}</p>
+                          <p className='text-sm text-gray-600'>Location: {car.location}</p>
+                        </div>
+                      </div>
+                    ) : null
+                  })()}
+                </div>
+              )}
+
+              <div className='mb-4'>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Reason for Replacement *
+                </label>
+                <textarea
+                  value={replacementReason}
+                  onChange={(e) => setReplacementReason(e.target.value)}
+                  placeholder='e.g., Original car is under repair, maintenance required, etc.'
+                  rows={4}
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary'
+                />
+              </div>
+
+              <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4'>
+                <p className='text-sm text-yellow-800'>
+                  <strong>⚠️ Note:</strong> The customer will be notified via email about the car replacement with the reason provided.
+                </p>
+              </div>
+
+              <div className='flex gap-3'>
+                <button
+                  onClick={handleReplaceCar}
+                  disabled={replaceLoading || !selectedNewCar || !replacementReason.trim()}
+                  className='flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                >
+                  {replaceLoading ? 'Replacing...' : 'Replace Car & Notify Customer'}
+                </button>
+                <button
+                  onClick={closeReplaceModal}
+                  disabled={replaceLoading}
+                  className='px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors'
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

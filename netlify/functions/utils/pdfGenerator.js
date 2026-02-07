@@ -1,8 +1,14 @@
-const { generateBookingInvoicePDF } = require('./pdfkitGenerator.js');
+const { generateBookingInvoicePDF } = require('./pdfmakePdfGenerator.js');
 
-// Backward compatibility export
+// Use pdfmake with direct PDFKit document access (most reliable)
 const generateBookingInvoice = async (bookingDetails) => {
-  return await generateBookingInvoicePDF(bookingDetails);
+  try {
+    console.log('📄 Generating invoice with pdfmake...');
+    return await generateBookingInvoicePDF(bookingDetails);
+  } catch (error) {
+    console.error('❌ PDF generation failed:', error.message);
+    throw new Error('PDF generation failed: ' + error.message);
+  }
 };
 
 module.exports = { generateBookingInvoice };

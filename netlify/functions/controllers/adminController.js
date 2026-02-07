@@ -1,7 +1,8 @@
 const User = require("../models/user.js");
 const Car = require("../models/car.js");
 const Booking = require("../models/booking.js");
-const { generatePdfFromHtml } = require('../utils/simplePdfGenerator.js');
+const { generatePdfFromHtml } = require('../utils/htmlToPdfGenerator.js');
+const { sendCarReplacementEmail } = require('../utils/emailService.js');
 
 // Admin middleware to check if user is admin
 const isAdmin = (req, res, next) => {
@@ -208,7 +209,7 @@ const exportEarningsPDF = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=earnings-report-${year}.pdf`);
     res.setHeader('Content-Length', pdfBuffer.length);
     res.setHeader('Cache-Control', 'no-cache');
-    res.send(pdfBuffer);
+    res.end(pdfBuffer, 'binary');
   } catch (error) {
     console.error('PDF export error:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -361,7 +362,7 @@ const exportCarsPDF = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=cars-report-${new Date().toISOString().split('T')[0]}.pdf`);
     res.setHeader('Content-Length', pdfBuffer.length);
     res.setHeader('Cache-Control', 'no-cache');
-    res.send(pdfBuffer);
+    res.end(pdfBuffer, 'binary');
   } catch (error) {
     console.error('PDF export error:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -504,7 +505,7 @@ const exportBookingsPDF = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=bookings-report-${new Date().toISOString().split('T')[0]}.pdf`);
     res.setHeader('Content-Length', pdfBuffer.length);
     res.setHeader('Cache-Control', 'no-cache');
-    res.send(pdfBuffer);
+    res.end(pdfBuffer, 'binary');
   } catch (error) {
     console.error('PDF export error:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -536,6 +537,133 @@ const exportBookingsExcel = async (req, res) => {
   }
 };
 
+// Replace car in booking
+const replaceCarInBooking = async (req, res) => {
+  try {
+    const { bookingId, newCarId, reason } = req.body;
+
+    if (!bookingId || !newCarId || !reason) {
+      return res.json({ 
+        success: false, 
+        message: "Booking ID, new car ID, and reason are required" 
+      });
+    }
+
+    // Find the booking with populated data
+    const booking = await Booking.findById(bookingId)
+      .populate('carId', 'brand model year category seating_capacity transmission fuel_type')
+      .populate('userId', 'name email');
+
+    if (!booking) {
+      return res.json({ success: false, message: "Booking not found" });
+    }
+
+    // Check if booking is active (not cancelled or completed)
+    if (booking.status === 'cancelled' || booking.status === 'completed') {
+      return res.json({ 
+        success: false, 
+        message: "Cannot replace car for cancelled or completed bookings" 
+      });
+    }
+
+    // Find the new car
+    const newCar = await Car.findById(newCarId);
+    if (!newCar) {
+      return res.json({ success: false, message: "New car not found" });
+    }
+
+    // Check if new car is available and approved
+    if (!newCar.isAvailable || !newCar.isApproved) {
+      return res.json({ 
+        success: false, 
+        message: "Selected car is not available or not approved" 
+      });
+    }
+
+    // Store original car details
+    const originalCar = booking.carId;
+
+    // Update booking with replacement info
+    booking.originalCarId = booking.carId;
+    booking.carId = newCarId;
+    booking.isCarReplaced = true;
+    booking.replacementReason = reason;
+    booking.replacedAt = new Date();
+
+    await booking.save();
+
+    // Send email notification to user
+    try {
+      await sendCarReplacementEmail(booking.userId.email, {
+        userName: booking.userId.name,
+        bookingId: booking.bookingId || booking._id,
+        originalCar: {
+          brand: originalCar.brand,
+          model: originalCar.model,
+          year: originalCar.year,
+          category: originalCar.category
+        },
+        newCar: {
+          brand: newCar.brand,
+          model: newCar.model,
+          year: newCar.year,
+          category: newCar.category,
+          seating_capacity: newCar.seating_capacity,
+          transmission: newCar.transmission,
+          fuel_type: newCar.fuel_type
+        },
+        reason: reason,
+        pickupDate: booking.pickupDate,
+        returnDate: booking.returnDate,
+        pickupLocation: booking.pickupLocation
+      });
+    } catch (emailError) {
+      console.error('Error sending replacement email:', emailError);
+      // Continue even if email fails
+    }
+
+    res.json({ 
+      success: true, 
+      message: "Car replaced successfully and user notified via email",
+      booking: await Booking.findById(bookingId)
+        .populate('carId', 'brand model year category')
+        .populate('originalCarId', 'brand model year category')
+        .populate('userId', 'name email')
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// Get available cars for replacement
+const getAvailableCarsForReplacement = async (req, res) => {
+  try {
+    const { bookingId } = req.query;
+
+    if (!bookingId) {
+      return res.json({ success: false, message: "Booking ID is required" });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.json({ success: false, message: "Booking not found" });
+    }
+
+    // Find available cars (excluding the current car)
+    const availableCars = await Car.find({
+      _id: { $ne: booking.carId },
+      isAvailable: true,
+      isApproved: true
+    }).select('brand model year category seating_capacity transmission fuel_type pricePerDay location image');
+
+    res.json({ success: true, cars: availableCars });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   isAdmin,
   getDashboardAnalytics,
@@ -547,5 +675,7 @@ module.exports = {
   exportBookingsPDF,
   exportBookingsExcel,
   getAllUsers,
-  getAllBookings
+  getAllBookings,
+  replaceCarInBooking,
+  getAvailableCarsForReplacement
 };

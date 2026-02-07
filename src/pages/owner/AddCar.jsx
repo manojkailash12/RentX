@@ -14,6 +14,7 @@ const AddCar = () => {
   const [car, setCar] = useState({
     brand: '',
     model: '',
+    registration_number: '',
     year: '',
     pricePerDay: '',
     category: '',
@@ -40,6 +41,7 @@ const AddCar = () => {
     const requiredFields = [
       { field: 'brand', label: 'Brand' },
       { field: 'model', label: 'Model' },
+      { field: 'registration_number', label: 'Registration Number' },
       { field: 'year', label: 'Year' },
       { field: 'pricePerDay', label: 'Daily Price' },
       { field: 'category', label: 'Category' },
@@ -58,6 +60,16 @@ const AddCar = () => {
     }
 
     // Additional validations
+    if (car.registration_number.length < 3) {
+      toast.error('Registration number must be at least 3 characters');
+      return;
+    }
+
+    if (car.registration_number.length > 20) {
+      toast.error('Registration number cannot exceed 20 characters');
+      return;
+    }
+
     if (car.year < 1990 || car.year > new Date().getFullYear() + 1) {
       toast.error('Please enter a valid year');
       return;
@@ -105,6 +117,7 @@ const AddCar = () => {
         setCar({
           brand: '',
           model: '',
+          registration_number: '',
           year: '',
           pricePerDay: '',
           category: '',
@@ -254,6 +267,20 @@ const AddCar = () => {
                 onChange={e => setCar({ ...car, model: e.target.value })} 
               />
             </div>
+          </div>
+
+          {/* registration number */}
+          <div className='mb-3'>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Registration Number *</label>
+            <input 
+              type="text" 
+              placeholder='e.g. MH-01-AB-1234' 
+              required 
+              className='w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md outline-none focus:border-primary focus:ring-1 focus:ring-primary' 
+              value={car.registration_number} 
+              onChange={e => setCar({ ...car, registration_number: e.target.value })} 
+            />
+            <p className="text-xs text-gray-500 mt-0.5">Enter the vehicle registration/license plate number</p>
           </div>
 
           {/* car year, price and category */}

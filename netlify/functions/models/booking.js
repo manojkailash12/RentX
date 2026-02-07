@@ -49,6 +49,11 @@ const bookingSchema = new mongoose.Schema(
     car: { type: ObjectId, ref: "Car" },
     user: { type: ObjectId, ref: "User" },
     owner: { type: ObjectId, ref: "User" },
+    // Car replacement fields
+    isCarReplaced: { type: Boolean, default: false },
+    originalCarId: { type: ObjectId, ref: "Car" },
+    replacementReason: { type: String },
+    replacedAt: { type: Date },
   },
   { timestamps: true }
 );

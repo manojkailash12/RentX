@@ -41,7 +41,7 @@ const addCar = async (req, res) => {
     }
 
     // Validate required fields
-    const requiredFields = ['brand', 'model', 'year', 'pricePerDay', 'category', 'transmission', 'fuel_type', 'seating_capacity', 'location', 'description'];
+    const requiredFields = ['brand', 'model', 'registration_number', 'year', 'pricePerDay', 'category', 'transmission', 'fuel_type', 'seating_capacity', 'location', 'description'];
     for (const field of requiredFields) {
       if (!car[field] || car[field].toString().trim() === '') {
         return res.status(400).json({ success: false, message: `${field} is required` });
@@ -49,6 +49,14 @@ const addCar = async (req, res) => {
     }
 
     // Additional validations
+    if (car.registration_number.length < 3) {
+      return res.status(400).json({ success: false, message: "Registration number must be at least 3 characters" });
+    }
+
+    if (car.registration_number.length > 20) {
+      return res.status(400).json({ success: false, message: "Registration number cannot exceed 20 characters" });
+    }
+
     if (car.year < 1990 || car.year > new Date().getFullYear() + 1) {
       return res.status(400).json({ success: false, message: "Please enter a valid year" });
     }
@@ -299,7 +307,7 @@ const updateCar = async (req, res) => {
     }
     
     // Validate required fields
-    const requiredFields = ['brand', 'model', 'year', 'pricePerDay', 'category', 'transmission', 'fuel_type', 'seating_capacity', 'location', 'description'];
+    const requiredFields = ['brand', 'model', 'registration_number', 'year', 'pricePerDay', 'category', 'transmission', 'fuel_type', 'seating_capacity', 'location', 'description'];
     for (const field of requiredFields) {
       if (!carData[field]) {
         return res.json({ success: false, message: `${field} is required` });

@@ -32,19 +32,28 @@ const createSession = async (userId, userAgent = '', ipAddress = '') => {
     }
 };
 
-// Verify session token and get user ID
+// Verify session token and get user ID with timeout
 const verifySession = async (sessionToken) => {
     try {
         if (!sessionToken) {
             return null;
         }
         
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Session verification timeout')), 5000);
+        });
+        
         // Find active session that hasn't expired
-        const session = await Session.findOne({
+        const sessionPromise = Session.findOne({
             sessionToken,
             isActive: true,
             expiresAt: { $gt: new Date() }
-        }).populate('userId');
+        })
+        .maxTimeMS(5000) // MongoDB query timeout
+        .populate('userId');
+        
+        const session = await Promise.race([sessionPromise, timeoutPromise]);
         
         if (!session) {
             return null;
@@ -99,15 +108,21 @@ const cleanupExpiredSessions = async () => {
     }
 };
 
-// Extend session expiry (refresh session)
+// Extend session expiry (refresh session) with timeout
 const extendSession = async (sessionToken) => {
     try {
         const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         
-        await Session.findOneAndUpdate(
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Extend session timeout')), 3000);
+        });
+        
+        const updatePromise = Session.findOneAndUpdate(
             { sessionToken, isActive: true },
             { expiresAt: newExpiresAt }
-        );
+        ).maxTimeMS(3000);
+        
+        await Promise.race([updatePromise, timeoutPromise]);
         
         return true;
     } catch (error) {

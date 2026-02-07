@@ -29,12 +29,9 @@ const sessionSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Index for faster queries
-sessionSchema.index({ sessionToken: 1 });
+// Index for faster queries - sessionToken already has unique:true, no need for separate index
 sessionSchema.index({ userId: 1, isActive: 1 });
-sessionSchema.index({ expiresAt: 1 }); // For automatic cleanup
-
-// Automatically delete expired sessions
+// Automatically delete expired sessions - TTL index
 sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const Session = mongoose.models.Session || mongoose.model('Session', sessionSchema);

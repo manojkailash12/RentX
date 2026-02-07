@@ -5,6 +5,13 @@ const carSchema = new mongoose.Schema({
     owner: {type: ObjectId, ref: "User", required: true},
     brand: {type: String, required: true},
     model: {type: String, required: true},
+    registration_number: {
+        type: String, 
+        required: true,
+        trim: true,
+        minlength: [3, 'Registration number must be at least 3 characters'],
+        maxlength: [20, 'Registration number cannot exceed 20 characters']
+    },
     name: {type: String, required: true}, // Car display name
     image: {type: String, required: true},
     year: {type: Number, required: true},

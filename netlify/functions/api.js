@@ -51,7 +51,9 @@ const {
   getUserBookings, 
   downloadInvoice, 
   calculateDistanceAPI,
-  updatePaymentStatus
+  updatePaymentStatus,
+  cancelUserBooking,
+  resendInvoiceEmail
 } = require('./controllers/bookingController.js');
 
 const {
@@ -65,7 +67,9 @@ const {
   exportBookingsPDF,
   exportBookingsExcel,
   getAllUsers,
-  getAllBookings
+  getAllBookings,
+  replaceCarInBooking,
+  getAvailableCarsForReplacement
 } = require('./controllers/adminController.js');
 
 // Import middleware
@@ -166,6 +170,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Custom middleware to handle Buffer parsing
 app.use((req, res, next) => {
+  // Skip buffer parsing for multipart/form-data (file uploads)
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    return next();
+  }
+  
   if ((req.method === 'POST' || req.method === 'PUT') && req.body) {
     // If body is a Buffer, convert it to JSON
     if (Buffer.isBuffer(req.body)) {
@@ -435,6 +445,8 @@ app.get('/bookings/owner', protect, requireDB, getOwnerBookings);
 app.post('/bookings/change-status', protect, requireDB, changeBookingStatus);
 app.post('/bookings/update-payment-status', protect, requireDB, updatePaymentStatus);
 app.get('/bookings/invoice/:bookingId', protect, requireDB, downloadInvoice);
+app.post('/bookings/cancel/:bookingId', protect, requireDB, cancelUserBooking);
+app.post('/bookings/resend-invoice/:bookingId', protect, requireDB, resendInvoiceEmail);
 
 // Admin Routes (with admin middleware)
 app.get('/admin/dashboard', protect, requireDB, isAdmin, getDashboardAnalytics);
@@ -447,6 +459,8 @@ app.get('/admin/bookings/export/pdf', protect, requireDB, isAdmin, exportBooking
 app.get('/admin/bookings/export/excel', protect, requireDB, isAdmin, exportBookingsExcel);
 app.get('/admin/users', protect, requireDB, isAdmin, getAllUsers);
 app.get('/admin/bookings', protect, requireDB, isAdmin, getAllBookings);
+app.post('/admin/replace-car', protect, requireDB, isAdmin, replaceCarInBooking);
+app.get('/admin/available-cars', protect, requireDB, isAdmin, getAvailableCarsForReplacement);
 
 // Global error handling middleware
 app.use((error, req, res, next) => {

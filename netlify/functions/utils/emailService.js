@@ -722,3 +722,230 @@ module.exports = {
   sendPasswordResetOTP, 
   sendWelcomeEmail 
 };
+
+// Send car replacement notification email
+const sendCarReplacementEmail = async (email, replacementDetails) => {
+  const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Car Replacement Notification - RentX</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #fff7ed;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(251, 146, 60, 0.15);
+      border: 2px solid #fed7aa;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      padding: 20px;
+      border-radius: 10px;
+      margin: -30px -30px 30px -30px;
+    }
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    .alert-message {
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      padding: 25px;
+      text-align: center;
+      border-radius: 12px;
+      margin: 20px 0;
+      border: 2px solid #fbbf24;
+    }
+    .car-details {
+      background-color: #fff7ed;
+      padding: 25px;
+      border-radius: 12px;
+      margin: 20px 0;
+      border: 2px solid #fed7aa;
+    }
+    .car-section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      border-left: 4px solid #f97316;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #fed7aa;
+    }
+    .label {
+      font-weight: bold;
+      color: #c2410c;
+    }
+    .value {
+      color: #9a3412;
+      font-weight: 600;
+    }
+    .reason-box {
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px 0;
+      border: 2px solid #fbbf24;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px solid #fed7aa;
+      color: #9a3412;
+      font-size: 14px;
+      background-color: #fff7ed;
+      padding: 20px;
+      border-radius: 10px;
+    }
+    .highlight {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🚗 RentX</div>
+      <p style="color: white; margin: 0; font-size: 16px;">Important Booking Update</p>
+    </div>
+    
+    <div class="alert-message">
+      <h2 style="color: #c2410c; margin: 0; font-size: 28px;">🔄 Car Replacement Notice</h2>
+      <p style="margin: 10px 0; color: #9a3412; font-weight: 600;">Your booked vehicle has been replaced</p>
+    </div>
+    
+    <div style="color: #9a3412; line-height: 1.6; margin-bottom: 20px; font-weight: 500;">
+      <p>Hello <strong style="color: #c2410c;">${replacementDetails.userName}</strong>,</p>
+      <p>We're writing to inform you that your booked vehicle has been replaced with an alternative vehicle. Please review the details below:</p>
+    </div>
+    
+    <div class="car-details">
+      <div class="car-section">
+        <h3 style="color: #c2410c; margin-top: 0; font-size: 18px;">❌ Original Vehicle</h3>
+        <div class="detail-row">
+          <span class="label">Vehicle:</span>
+          <span class="value">${replacementDetails.originalCar.brand} ${replacementDetails.originalCar.model}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Year:</span>
+          <span class="value">${replacementDetails.originalCar.year}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Category:</span>
+          <span class="value">${replacementDetails.originalCar.category}</span>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin: 15px 0;">
+        <span style="font-size: 24px;">⬇️</span>
+      </div>
+      
+      <div class="car-section" style="border-left-color: #059669;">
+        <h3 style="color: #059669; margin-top: 0; font-size: 18px;">✅ New Replacement Vehicle</h3>
+        <div class="detail-row">
+          <span class="label">Vehicle:</span>
+          <span class="value highlight">${replacementDetails.newCar.brand} ${replacementDetails.newCar.model}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Year:</span>
+          <span class="value">${replacementDetails.newCar.year}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Category:</span>
+          <span class="value">${replacementDetails.newCar.category}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Seating:</span>
+          <span class="value">${replacementDetails.newCar.seating_capacity} seats</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Transmission:</span>
+          <span class="value">${replacementDetails.newCar.transmission}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Fuel Type:</span>
+          <span class="value">${replacementDetails.newCar.fuel_type}</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="reason-box">
+      <h3 style="color: #c2410c; margin-top: 0; font-size: 18px;">📝 Reason for Replacement</h3>
+      <p style="margin: 0; color: #9a3412; font-weight: 600; line-height: 1.6;">${replacementDetails.reason}</p>
+    </div>
+    
+    <div style="background-color: #fff7ed; padding: 20px; border-left: 4px solid #f97316; margin: 20px 0; border-radius: 8px;">
+      <p style="color: #c2410c;"><strong>📋 Booking Details:</strong></p>
+      <ul style="margin: 10px 0; padding-left: 20px; color: #9a3412;">
+        <li><strong>Booking ID:</strong> ${replacementDetails.bookingId}</li>
+        <li><strong>Pickup Date:</strong> ${new Date(replacementDetails.pickupDate).toLocaleDateString('en-IN')}</li>
+        <li><strong>Return Date:</strong> ${new Date(replacementDetails.returnDate).toLocaleDateString('en-IN')}</li>
+        <li><strong>Pickup Location:</strong> ${replacementDetails.pickupLocation}</li>
+      </ul>
+    </div>
+    
+    <div class="footer">
+      <p><strong style="color: #c2410c;">📌 Important Notes:</strong></p>
+      <p style="line-height: 1.6;">
+        ✅ Your booking remains confirmed with the new vehicle<br>
+        💰 All pricing and terms remain unchanged<br>
+        📅 Pickup date and location remain the same<br>
+        🔑 You can view the new car details in your account<br>
+        📞 Contact us if you have any concerns
+      </p>
+      <p style="margin-top: 20px; font-size: 16px; font-weight: bold; color: #c2410c;">🙏 We apologize for any inconvenience!</p>
+      <p style="margin-top: 15px; font-size: 12px; color: #9a3412;">📧 This is an automated email. Please do not reply to this message.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "🔄 Car Replacement Notice - RentX Booking Update",
+    html: htmlContent,
+  };
+
+  try {
+    const transporter = createTransporter();
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Car replacement email sent successfully to ${email}:`, info.response);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`Error sending car replacement email to ${email}:`, error);
+    throw error;
+  }
+};
+
+module.exports = { 
+  generateOTP, 
+  sendOTPEmail, 
+  sendBookingConfirmation, 
+  sendPasswordResetOTP, 
+  sendWelcomeEmail,
+  sendCarReplacementEmail
+};
