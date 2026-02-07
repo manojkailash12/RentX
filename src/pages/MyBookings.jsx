@@ -11,6 +11,7 @@ const MyBookings = () => {
 
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(false)
+  const [imageError, setImageError] = useState({})
 
   const fetchMyBookings = async () => {
     try {
@@ -46,8 +47,14 @@ const MyBookings = () => {
       
       toast.success('Invoice downloaded successfully')
     } catch (error) {
+      console.error('Invoice download error:', error)
       toast.error('Failed to download invoice')
     }
+  }
+
+  const handleImageError = (bookingId, imageUrl) => {
+    console.error(`Failed to load car image for booking ${bookingId}:`, imageUrl)
+    setImageError(prev => ({ ...prev, [bookingId]: true }))
   }
 
   const getCarData = (booking) => {
@@ -126,7 +133,12 @@ const MyBookings = () => {
                   {/* car image + info */}
                   <div className='md:col-span-1'>
                     <div className='rounded-md overflow-hidden mb-3'>
-                      <img src={car.image} alt="" className='w-full h-auto aspect-video object-cover' />
+                      <img 
+                        src={imageError[booking._id] ? assets.carIconColored : car.image} 
+                        alt={`${car.brand} ${car.model}`}
+                        className='w-full h-auto aspect-video object-cover' 
+                        onError={() => handleImageError(booking._id, car.image)}
+                      />
                     </div>
                     <p className='text-lg font-medium mt-2'>{car.brand} {car.model}</p>
                     <p className='text-gray-500'>{car.year} • {car.category}</p>

@@ -3,6 +3,7 @@ const Car = require("../models/car.js");
 const User = require("../models/user.js");
 const { generateBookingInvoice } = require("../utils/pdfGenerator.js");
 const { sendBookingConfirmation } = require("../utils/emailService.js");
+const { createServerlessResponse } = require("../utils/serverlessResponse.js");
 const axios = require("axios");
 const { calculateAccurateDistance, getDistanceFromDatabase } = require("../utils/distanceCalculator.js");
 
@@ -575,17 +576,51 @@ const downloadInvoice = async (req, res) => {
     
     const pdfBuffer = await generateBookingInvoice(bookingDetails);
     
-    // For serverless functions, properly handle binary data
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=invoice-${bookingId}.pdf`);
-    res.setHeader('Content-Length', pdfBuffer.length);
-    res.setHeader('Cache-Control', 'no-cache');
+    // Detect serverless environment and handle binary data appropriately
+    const isServerless = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY;
     
-    // Send buffer as base64 for serverless compatibility
-    res.send(pdfBuffer);
+    if (isServerless) {
+      // Serverless: Return Base64-encoded binary with proper flag
+      // This is required for AWS Lambda/Netlify Functions to handle binary data correctly
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename=invoice-${bookingId}.pdf`,
+          'Cache-Control': 'no-cache',
+          'Access-Control-Allow-Origin': '*'
+        },
+        body: pdfBuffer.toString('base64'),
+        isBase64Encoded: true
+      };
+    } else {
+      // Local Express: Send buffer directly
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=invoice-${bookingId}.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.setHeader('Cache-Control', 'no-cache');
+      res.send(pdfBuffer);
+    }
   } catch (error) {
-    console.log(error.message);
-    res.json({ success: false, message: error.message });
+    console.error('PDF download error:', error.message);
+    
+    const isServerless = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY;
+    
+    if (isServerless) {
+      return {
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        },
+        body: JSON.stringify({ 
+          success: false, 
+          message: 'Failed to generate invoice. Please try again later.' 
+        })
+      };
+    } else {
+      res.json({ success: false, message: error.message });
+    }
   }
 };
 module.exports = {
