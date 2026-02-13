@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../../context/AppContext';
 
 const PayrollManagement = () => {
-  const { backendUrl, token } = useAppContext();
+  const { axios, token } = useAppContext();
   const [payrolls, setPayrolls] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -32,9 +31,7 @@ const PayrollManagement = () => {
 
   const fetchEmployees = async () => {
     try {
-      const { data } = await axios.get(`${backendUrl}/employees/available-users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.get('/employees/available-users');
       if (data.success) {
         setEmployees(data.users || []);
         console.log('Fetched employees:', data.users);
@@ -54,9 +51,7 @@ const PayrollManagement = () => {
       if (filters.year) params.append('year', filters.year);
       if (filters.status) params.append('status', filters.status);
 
-      const { data } = await axios.get(`${backendUrl}/payroll?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.get(`/payroll?${params}`);
       if (data.success) {
         setPayrolls(data.payroll);
       }
@@ -70,11 +65,7 @@ const PayrollManagement = () => {
   const handleGeneratePayroll = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await axios.post(
-        `${backendUrl}/payroll/generate`,
-        generateForm,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const { data } = await axios.post('/payroll/generate', generateForm);
       if (data.success) {
         toast.success('Payroll generated successfully');
         setShowGenerateModal(false);
@@ -90,9 +81,8 @@ const PayrollManagement = () => {
     
     try {
       const { data } = await axios.post(
-        `${backendUrl}/payroll/${payrollId}/pay`,
-        { paymentMethod: 'bank-transfer' },
-        { headers: { Authorization: `Bearer ${token}` } }
+        `/payroll/${payrollId}/pay`,
+        { paymentMethod: 'bank-transfer' }
       );
       if (data.success) {
         toast.success('Salary paid successfully');
@@ -105,11 +95,7 @@ const PayrollManagement = () => {
 
   const handleEmailPayslip = async (payrollId) => {
     try {
-      const { data } = await axios.post(
-        `${backendUrl}/payroll/${payrollId}/email`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const { data } = await axios.post(`/payroll/${payrollId}/email`, {});
       if (data.success) {
         toast.success('Payslip emailed successfully');
       }
@@ -121,9 +107,8 @@ const PayrollManagement = () => {
   const handleDownloadPayslip = async (payrollId) => {
     try {
       const response = await axios.get(
-        `${backendUrl}/payroll/${payrollId}/download`,
+        `/payroll/${payrollId}/download`,
         { 
-          headers: { Authorization: `Bearer ${token}` },
           responseType: 'blob'
         }
       );

@@ -19,14 +19,35 @@ const LeaveManagement = () => {
   const fetchLeaveRequests = async () => {
     try {
       setLoading(true);
+      
+      // Check if user has employee role
+      if (!userData || userData.role !== 'employee') {
+        toast.error('You must be logged in as an employee to view leave requests');
+        setLoading(false);
+        return;
+      }
+      
       const { data } = await axios.get('/leave/my-requests');
       
       if (data.success) {
         setLeaveRequests(data.leaves || []);
+      } else {
+        toast.error(data.message || 'Failed to fetch leave requests');
       }
     } catch (error) {
       console.error('Error fetching leave requests:', error);
-      toast.error(error.response?.data?.message || 'Failed to fetch leave requests');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch leave requests';
+      
+      // Show more specific error messages
+      if (error.response?.status === 403) {
+        toast.error('Access denied. Employee access required.');
+      } else if (error.response?.status === 401) {
+        toast.error('Please log in to view leave requests');
+      } else if (error.response?.status === 404) {
+        toast.error('Employee record not found. Please contact admin.');
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }

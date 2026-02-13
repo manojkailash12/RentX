@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../../context/AppContext';
 
 const EmployeeManagement = () => {
-  const { backendUrl, token } = useAppContext();
+  const { axios, token } = useAppContext();
   const [employees, setEmployees] = useState([]);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,9 +25,7 @@ const EmployeeManagement = () => {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`${backendUrl}/employees`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.get('/employees');
       if (data.success) {
         setEmployees(data.employees);
       }
@@ -42,9 +39,7 @@ const EmployeeManagement = () => {
   const fetchAvailableUsers = async () => {
     try {
       console.log('🔍 Fetching available users...');
-      const { data } = await axios.get(`${backendUrl}/employees/available-users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.get('/employees/available-users');
       console.log('📦 Response:', data);
       if (data.success) {
         console.log(`✅ Found ${data.count} available users`);
@@ -76,14 +71,13 @@ const EmployeeManagement = () => {
       if (selectedEmployee) {
         // Update existing employee with salary
         const { data } = await axios.put(
-          `${backendUrl}/employees/${selectedEmployee.employeeId}`,
+          `/employees/${selectedEmployee.employeeId}`,
           {
             salary: {
               type: formData.salaryType,
               amount: formData.salaryAmount
             }
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
+          }
         );
         
         if (data.success) {
@@ -94,9 +88,7 @@ const EmployeeManagement = () => {
         }
       } else {
         // Create new employee
-        const { data} = await axios.post(`${backendUrl}/employees/create`, formData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const { data} = await axios.post('/employees/create', formData);
         if (data.success) {
           toast.success('Employee created successfully');
           setShowAddModal(false);
@@ -118,9 +110,8 @@ const EmployeeManagement = () => {
   const handleStatusChange = async (employeeId, newStatus) => {
     try {
       const { data } = await axios.put(
-        `${backendUrl}/employees/${employeeId}`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
+        `/employees/${employeeId}`,
+        { status: newStatus }
       );
       if (data.success) {
         toast.success('Status updated');

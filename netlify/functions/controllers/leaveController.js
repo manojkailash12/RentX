@@ -103,6 +103,27 @@ exports.getMyLeaveRequests = async (req, res) => {
     const userId = req.user._id;
     const { status, startDate, endDate } = req.query;
 
+    // Check if employee record exists
+    const employee = await Employee.findOne({ userId, status: 'active' });
+    if (!employee) {
+      // Return empty array if no employee record yet
+      return res.json({
+        success: true,
+        leaves: [],
+        stats: {
+          total: 0,
+          pending: 0,
+          approved: 0,
+          rejected: 0,
+          cancelled: 0,
+          totalDaysRequested: 0,
+          totalDaysApproved: 0
+        },
+        count: 0,
+        message: 'No employee record found. Please contact admin to set up your employee profile.'
+      });
+    }
+
     const filter = { userId };
 
     if (status) {
