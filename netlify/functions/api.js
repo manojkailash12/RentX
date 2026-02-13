@@ -827,10 +827,10 @@ app.post('/attendance/clock-out', protect, requireDB, clockOut);
 app.get('/attendance', protect, requireDB, getAttendance);
 
 // Employee Attendance Routes (Self-Service)
-app.post('/employee-attendance/checkin', protect, requireDB, isEmployee, employeeCheckIn);
-app.put('/employee-attendance/checkout', protect, requireDB, isEmployee, employeeCheckOut);
-app.get('/employee-attendance/history/:userId', protect, requireDB, isEmployee, getEmployeeAttendanceHistory);
-app.get('/employee-attendance/today/:userId', protect, requireDB, isEmployee, getTodayAttendanceStatus);
+app.post('/employee-attendance/checkin', protect, requireDB, employeeCheckIn);
+app.put('/employee-attendance/checkout', protect, requireDB, employeeCheckOut);
+app.get('/employee-attendance/history/:userId', protect, requireDB, getEmployeeAttendanceHistory);
+app.get('/employee-attendance/today/:userId', protect, requireDB, getTodayAttendanceStatus);
 
 // Leave Management Routes
 app.post('/leave/request', protect, requireDB, isEmployee, createLeaveRequest);
@@ -1094,7 +1094,11 @@ app.use((req, res) => {
       'GET /owner/dashboard',
       'POST /bookings/create',
       'GET /bookings/user',
-      'GET /admin/dashboard'
+      'GET /admin/dashboard',
+      'POST /employee-attendance/checkin',
+      'PUT /employee-attendance/checkout',
+      'GET /employee-attendance/history/:userId',
+      'GET /employee-attendance/today/:userId'
     ]
   });
 });
