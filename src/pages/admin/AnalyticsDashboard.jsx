@@ -12,7 +12,7 @@ const AnalyticsDashboard = () => {
   const [topOwners, setTopOwners] = useState([]);
   const [locations, setLocations] = useState([]);
   const [dateRange, setDateRange] = useState('30'); // days
-  const { token, axios, isAdmin, backendUrl } = useAppContext();
+  const { token, axios, isAdmin, backendUrl, getImageUrl } = useAppContext();
 
   // Helper function to download files
   const downloadFile = async (endpoint, filename) => {
@@ -373,7 +373,7 @@ const AnalyticsDashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <img
-                            src={car.image || '/default-car.png'}
+                            src={getImageUrl(car.image) || '/default-car.png'}
                             alt={`${car.brand} ${car.model}`}
                             className="h-10 w-10 rounded object-cover"
                           />

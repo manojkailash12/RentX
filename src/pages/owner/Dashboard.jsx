@@ -14,7 +14,7 @@ import ConfirmDialog from '../../components/ConfirmDialog'
 const Dashboard = () => {
   const { t } = useTranslation();
 
-  const { axios, isOwner, isAdmin, currency, user, downloadFile } = useAppContext()
+  const { axios, isOwner, isAdmin, currency, user, downloadFile, getImageUrl } = useAppContext()
 
   const [data, setData] = useState({
     totalCars: 0,
@@ -638,7 +638,7 @@ const Dashboard = () => {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <img
-                                  src={car.image || '/default-car.png'}
+                                  src={getImageUrl(car.image) || '/default-car.png'}
                                   alt={`${car.brand} ${car.model}`}
                                   className="h-10 w-10 rounded object-cover"
                                 />

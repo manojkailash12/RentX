@@ -2,6 +2,16 @@
 
 A comprehensive car rental platform built with React, Node.js, Express, and MongoDB, deployed on Netlify.
 
+## 🌟 Recent Updates
+
+### Latest Fixes (February 2026)
+- ✅ **Attendance Timezone Fix** - Check-in times now display correctly in IST (10:20 AM shows as 10:20 AM, not 5:20 AM)
+- ✅ **Page Refresh Error Fix** - Fixed "Something went wrong" error on attendance page refresh
+- ✅ **Employee Role Restrictions** - Removed "My Bookings" page access from employee role
+- ✅ **Cloudinary Image Support** - Fixed car images not displaying in production with proper Cloudinary integration
+- ✅ **Error Boundary** - Added global error handling for better user experience
+- ✅ **Improved Loading States** - Better null checks and loading indicators
+
 ## 🌟 Features
 
 ### Core Features

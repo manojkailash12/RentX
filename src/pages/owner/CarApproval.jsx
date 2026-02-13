@@ -6,7 +6,7 @@ import { assets } from '../../assets/assets'
 import BackButton from '../../components/BackButton'
 
 const CarApproval = () => {
-  const { axios, isEmployee } = useAppContext()
+  const { axios, isEmployee, getImageUrl } = useAppContext()
   const [pendingCars, setPendingCars] = useState([])
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 })
   const [loading, setLoading] = useState(false)
@@ -154,7 +154,7 @@ const CarApproval = () => {
           {pendingCars.map((car) => (
             <div key={car._id} className='border border-borderColor rounded-lg overflow-hidden hover:shadow-lg transition-shadow'>
               <img 
-                src={car.image} 
+                src={getImageUrl(car.image) || assets.car_image1} 
                 alt={`${car.brand} ${car.model}`}
                 className='w-full h-48 object-cover'
               />

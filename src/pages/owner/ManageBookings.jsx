@@ -8,7 +8,7 @@ import BackButton from '../../components/BackButton';
 
 const ManageBookings = () => {
 
-  const { currency, axios, isAdmin, downloadFile } = useAppContext();
+  const { currency, axios, isAdmin, downloadFile, getImageUrl } = useAppContext();
 
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(false)
@@ -318,7 +318,7 @@ const ManageBookings = () => {
                             {car ? (
                               <>
                                 <img
-                                  src={car.image || assets.car_image1}
+                                  src={getImageUrl(car.image) || assets.car_image1}
                                   alt={`${car.brand} ${car.model}`}
                                   className='h-12 w-12 aspect-square rounded-md object-cover'
                                   onError={(e) => {
@@ -559,7 +559,7 @@ const ManageBookings = () => {
                     return car ? (
                       <div className='flex gap-4'>
                         <img
-                          src={car.image || assets.car_image1}
+                          src={getImageUrl(car.image) || assets.car_image1}
                           alt={`${car.brand} ${car.model}`}
                           className='h-20 w-20 rounded-lg object-cover'
                           onError={(e) => { e.target.src = assets.car_image1 }}

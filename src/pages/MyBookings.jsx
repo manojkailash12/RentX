@@ -11,7 +11,7 @@ import BackButton from '../components/BackButton';
 
 const MyBookings = () => {
   const { t } = useTranslation();
-  const { axios, user, currency } = useAppContext()
+  const { axios, user, currency, getImageUrl } = useAppContext()
 
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(false)
@@ -228,8 +228,8 @@ const MyBookings = () => {
     if (imageError[booking._id]) {
       return assets.carIconColored
     }
-    // Return the actual car image URL
-    return car.image || assets.carIconColored
+    // Return the actual car image URL with proper handling
+    return getImageUrl(car.image) || assets.carIconColored
   }
 
   const getCarData = (booking) => {

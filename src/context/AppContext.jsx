@@ -212,9 +212,14 @@ export const AppProvider = ({ children }) => {
     const getImageUrl = (imagePath) => {
         if (!imagePath) return null;
         
-        // If it's already a full URL, return as is
+        // If it's already a full URL (Cloudinary), return as is
         if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
             return imagePath;
+        }
+        
+        // If it starts with res.cloudinary.com, add https://
+        if (imagePath.startsWith('res.cloudinary.com')) {
+            return `https://${imagePath}`;
         }
         
         // If it starts with /.netlify, it's already a full path for Netlify Functions

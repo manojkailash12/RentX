@@ -15,7 +15,7 @@ import InsuranceSelector from "../components/Insurance/InsuranceSelector";
 const CarDetails = () => {
   const { t } = useTranslation();
   const { id } = useParams();
-  const { cars, axios, user, isAdmin } = useAppContext()
+  const { cars, axios, user, isAdmin, getImageUrl } = useAppContext()
   const navigate = useNavigate();
   const [car, setCar] = useState(null);
   const [pickupLocation, setPickupLocation] = useState('');
@@ -345,7 +345,7 @@ const CarDetails = () => {
             initial={{ opacity: 0, scale: 0.98 }}
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
-            src={car.image}
+            src={getImageUrl(car.image) || assets.car_image1}
             alt=""
             className="w-full h-auto max-h-80 object-contain rounded-xl mb-4 shadow-md bg-gray-50"
           />

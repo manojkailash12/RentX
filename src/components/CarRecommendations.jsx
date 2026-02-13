@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 
 const CarRecommendations = () => {
-  const { backendUrl, token } = useAppContext();
+  const { backendUrl, token, getImageUrl } = useAppContext();
   const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState([]);
   const [trending, setTrending] = useState([]);
@@ -96,7 +96,7 @@ const CarRecommendations = () => {
           >
             <div className="relative">
               <img
-                src={car.image}
+                src={getImageUrl(car.image)}
                 alt={car.name}
                 className="w-full h-48 object-cover"
               />
