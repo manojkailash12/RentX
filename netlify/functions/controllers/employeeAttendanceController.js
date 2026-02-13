@@ -15,9 +15,67 @@ const employeeCheckIn = async (req, res) => {
 
   try {
     // Get employee details
-    const employee = await Employee.findOne({ userId }).populate('userId');
+    let employee = await Employee.findOne({ userId }).populate('userId');
+    
+    // If employee record doesn't exist, try to create one automatically
     if (!employee) {
-      return res.status(404).json({ message: "Employee not found" });
+      console.log(`Employee record not found for userId: ${userId}, attempting to create...`);
+      
+      // Verify user exists and has employee role
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ 
+          message: "User not found",
+          userId: userId
+        });
+      }
+      
+      if (user.role !== 'employee') {
+        return res.status(403).json({ 
+          message: "User is not an employee. Only employees can check in.",
+          userRole: user.role
+        });
+      }
+      
+      // Auto-create employee record with default values
+      try {
+        // Get the next employee ID
+        const Counter = require('../models/counter.js');
+        let counter = await Counter.findOne({ name: 'employeeId' });
+        if (!counter) {
+          counter = await Counter.create({ name: 'employeeId', value: 1000 });
+        }
+        
+        const employeeId = `EMP${String(counter.value).padStart(4, '0')}`;
+        await Counter.findOneAndUpdate(
+          { name: 'employeeId' },
+          { $inc: { value: 1 } }
+        );
+        
+        employee = await Employee.create({
+          userId: userId,
+          employeeId: employeeId,
+          department: 'General',
+          position: 'Staff',
+          shift: 'morning',
+          shiftTiming: {
+            start: '09:00',
+            end: '14:00'
+          },
+          salary: 0,
+          status: 'active',
+          joiningDate: new Date()
+        });
+        
+        employee = await Employee.findById(employee._id).populate('userId');
+        console.log(`✅ Auto-created employee record: ${employeeId} for user ${user.name}`);
+      } catch (createError) {
+        console.error('Error auto-creating employee record:', createError);
+        return res.status(500).json({ 
+          message: "Failed to create employee record. Please contact administrator.",
+          error: createError.message
+        });
+      }
     }
 
     if (employee.status !== 'active') {
@@ -152,7 +210,11 @@ const employeeCheckOut = async (req, res) => {
   try {
     const employee = await Employee.findOne({ userId });
     if (!employee) {
-      return res.status(404).json({ message: "Employee not found" });
+      console.error(`Employee record not found for userId: ${userId}`);
+      return res.status(404).json({ 
+        message: "Employee record not found. Please contact your administrator to set up your employee profile.",
+        userId: userId
+      });
     }
 
     const today = new Date();
@@ -280,7 +342,11 @@ const getEmployeeAttendanceHistory = async (req, res) => {
   try {
     const employee = await Employee.findOne({ userId });
     if (!employee) {
-      return res.status(404).json({ message: "Employee not found" });
+      console.error(`Employee record not found for userId: ${userId}`);
+      return res.status(404).json({ 
+        message: "Employee record not found. Please contact your administrator to set up your employee profile.",
+        userId: userId
+      });
     }
 
     let dateFilter = {};
@@ -371,9 +437,67 @@ const getTodayAttendanceStatus = async (req, res) => {
   }
 
   try {
-    const employee = await Employee.findOne({ userId }).populate('userId', 'name email');
+    let employee = await Employee.findOne({ userId }).populate('userId', 'name email');
+    
+    // If employee record doesn't exist, try to create one automatically
     if (!employee) {
-      return res.status(404).json({ message: "Employee not found" });
+      console.log(`Employee record not found for userId: ${userId}, attempting to create...`);
+      
+      // Verify user exists and has employee role
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ 
+          message: "User not found",
+          userId: userId
+        });
+      }
+      
+      if (user.role !== 'employee') {
+        return res.status(403).json({ 
+          message: "User is not an employee. Only employees can access attendance.",
+          userRole: user.role
+        });
+      }
+      
+      // Auto-create employee record with default values
+      try {
+        // Get the next employee ID
+        const Counter = require('../models/counter.js');
+        let counter = await Counter.findOne({ name: 'employeeId' });
+        if (!counter) {
+          counter = await Counter.create({ name: 'employeeId', value: 1000 });
+        }
+        
+        const employeeId = `EMP${String(counter.value).padStart(4, '0')}`;
+        await Counter.findOneAndUpdate(
+          { name: 'employeeId' },
+          { $inc: { value: 1 } }
+        );
+        
+        employee = await Employee.create({
+          userId: userId,
+          employeeId: employeeId,
+          department: 'General',
+          position: 'Staff',
+          shift: 'morning',
+          shiftTiming: {
+            start: '09:00',
+            end: '14:00'
+          },
+          salary: 0,
+          status: 'active',
+          joiningDate: new Date()
+        });
+        
+        employee = await Employee.findById(employee._id).populate('userId', 'name email');
+        console.log(`✅ Auto-created employee record: ${employeeId} for user ${user.name}`);
+      } catch (createError) {
+        console.error('Error auto-creating employee record:', createError);
+        return res.status(500).json({ 
+          message: "Failed to create employee record. Please contact administrator.",
+          error: createError.message
+        });
+      }
     }
 
     const today = new Date();

@@ -343,6 +343,106 @@
   to = "/.netlify/functions/api/analytics/users"
   status = 200
 
+# Employee Attendance Routes
+[[redirects]]
+  from = "/employee-attendance/checkin"
+  to = "/.netlify/functions/api/employee-attendance/checkin"
+  status = 200
+
+[[redirects]]
+  from = "/employee-attendance/checkout"
+  to = "/.netlify/functions/api/employee-attendance/checkout"
+  status = 200
+
+[[redirects]]
+  from = "/employee-attendance/history/*"
+  to = "/.netlify/functions/api/employee-attendance/history/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/employee-attendance/today/*"
+  to = "/.netlify/functions/api/employee-attendance/today/:splat"
+  status = 200
+
+# Employee Management Routes
+[[redirects]]
+  from = "/employees/create"
+  to = "/.netlify/functions/api/employees/create"
+  status = 200
+
+[[redirects]]
+  from = "/employees/available-users"
+  to = "/.netlify/functions/api/employees/available-users"
+  status = 200
+
+[[redirects]]
+  from = "/employees"
+  to = "/.netlify/functions/api/employees"
+  status = 200
+
+[[redirects]]
+  from = "/employees/*"
+  to = "/.netlify/functions/api/employees/:splat"
+  status = 200
+
+# Attendance Routes (Admin)
+[[redirects]]
+  from = "/attendance/clock-in"
+  to = "/.netlify/functions/api/attendance/clock-in"
+  status = 200
+
+[[redirects]]
+  from = "/attendance/clock-out"
+  to = "/.netlify/functions/api/attendance/clock-out"
+  status = 200
+
+[[redirects]]
+  from = "/attendance"
+  to = "/.netlify/functions/api/attendance"
+  status = 200
+
+# Leave Management Routes
+[[redirects]]
+  from = "/leave/request"
+  to = "/.netlify/functions/api/leave/request"
+  status = 200
+
+[[redirects]]
+  from = "/leave/my-requests"
+  to = "/.netlify/functions/api/leave/my-requests"
+  status = 200
+
+[[redirects]]
+  from = "/leave/all"
+  to = "/.netlify/functions/api/leave/all"
+  status = 200
+
+[[redirects]]
+  from = "/leave/balance"
+  to = "/.netlify/functions/api/leave/balance"
+  status = 200
+
+[[redirects]]
+  from = "/leave/*"
+  to = "/.netlify/functions/api/leave/:splat"
+  status = 200
+
+# Payroll Routes
+[[redirects]]
+  from = "/payroll/generate"
+  to = "/.netlify/functions/api/payroll/generate"
+  status = 200
+
+[[redirects]]
+  from = "/payroll"
+  to = "/.netlify/functions/api/payroll"
+  status = 200
+
+[[redirects]]
+  from = "/payroll/*"
+  to = "/.netlify/functions/api/payroll/:splat"
+  status = 200
+
 [[redirects]]
   from = "/bookings/update-payment-status"
   to = "/.netlify/functions/api/bookings/update-payment-status"

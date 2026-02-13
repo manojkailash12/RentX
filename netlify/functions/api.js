@@ -832,6 +832,35 @@ app.put('/employee-attendance/checkout', protect, requireDB, employeeCheckOut);
 app.get('/employee-attendance/history/:userId', protect, requireDB, getEmployeeAttendanceHistory);
 app.get('/employee-attendance/today/:userId', protect, requireDB, getTodayAttendanceStatus);
 
+// Debug endpoint for employee attendance (development only)
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/employee-attendance/debug/:userId', protect, requireDB, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const Employee = require('./models/employee.js');
+      const User = require('./models/user.js');
+      
+      const user = await User.findById(userId);
+      const employee = await Employee.findOne({ userId });
+      
+      res.json({
+        success: true,
+        userId,
+        userExists: !!user,
+        userRole: user?.role,
+        employeeExists: !!employee,
+        employeeData: employee ? {
+          employeeId: employee.employeeId,
+          shift: employee.shift,
+          status: employee.status
+        } : null
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+}
+
 // Leave Management Routes
 app.post('/leave/request', protect, requireDB, isEmployee, createLeaveRequest);
 app.get('/leave/my-requests', protect, requireDB, isEmployee, getMyLeaveRequests);

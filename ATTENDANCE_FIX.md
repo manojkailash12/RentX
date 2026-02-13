@@ -1,82 +1,138 @@
-# Attendance Check-In Button Fix
+# Employee Attendance Fix - Production Deployment
 
-## Issue
-The check-in button was not showing on the attendance page in Netlify deployment.
+## Issues Fixed
 
-## Root Cause
-The button was only displayed when `todayStatus?.canCheckIn` was true, but if the API endpoint failed or returned an error, the button would not appear at all.
+### 1. **API Endpoint Not Found (404 Error)**
+**Problem**: Employee attendance endpoints were returning 404 errors in Netlify production deployment.
 
-## Solution Applied
+**Root Cause**: Missing redirect rules in `netlify.toml` for employee-attendance routes.
 
-### 1. Enhanced Error Handling
-Added fallback state in `fetchTodayStatus` to ensure the check-in button always appears even if the API fails:
+**Solution**: Added the following redirect rules to `netlify.toml`:
 
-```javascript
-catch (error) {
-  console.error('Error fetching today status:', error);
-  toast.error('Failed to fetch attendance status');
-  // Set default state to allow check-in
-  setTodayStatus({
-    canCheckIn: true,
-    canCheckOut: false,
-    hasCheckedIn: false,
-    hasCheckedOut: false,
-    today: new Date(),
-    attendance: null
-  });
-}
+```toml
+# Employee Attendance Routes
+[[redirects]]
+  from = "/employee-attendance/checkin"
+  to = "/.netlify/functions/api/employee-attendance/checkin"
+  status = 200
+
+[[redirects]]
+  from = "/employee-attendance/checkout"
+  to = "/.netlify/functions/api/employee-attendance/checkout"
+  status = 200
+
+[[redirects]]
+  from = "/employee-attendance/history/*"
+  to = "/.netlify/functions/api/employee-attendance/history/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/employee-attendance/today/*"
+  to = "/.netlify/functions/api/employee-attendance/today/:splat"
+  status = 200
 ```
 
-### 2. Improved Button Logic
-Modified the check-in button condition to show the button in multiple scenarios:
+### 2. **Failed to Fetch Attendance Status**
+**Problem**: Frontend was unable to fetch today's attendance status.
 
-```javascript
-{(todayStatus?.canCheckIn || (!todayStatus?.hasCheckedIn && !todayStatus?.attendance?.checkIn)) && (
-  <button onClick={handleCheckIn}>Check In</button>
-)}
-```
+**Root Cause**: 
+- Frontend was using `${backendUrl}/employee-attendance/...` which created incorrect URLs
+- Axios was already configured with a baseURL, so concatenating caused double paths
 
-This ensures the button shows when:
-- `canCheckIn` is explicitly true (normal case)
-- OR when there's no check-in record yet (fallback case)
+**Solution**: 
+- Updated all API calls in `Attendance.jsx` to use relative paths (e.g., `/employee-attendance/today/${userId}`)
+- Removed `backendUrl` from the component since axios baseURL handles it automatically
 
-### 3. Added Error Message
-Added a user-friendly error message when the API fails to load:
+### 3. **Employee Record Not Found**
+**Problem**: Users with employee role didn't have corresponding Employee documents in the database.
 
-```javascript
-{!todayStatus && (
-  <div className="text-red-600 font-medium text-center w-full mb-4">
-    Unable to load attendance status. Please refresh the page.
-  </div>
-)}
-```
+**Root Cause**: Employee records weren't automatically created when users were assigned the employee role.
 
-## Testing Checklist
-
-### Local Testing
-- [x] Check-in button appears on page load
-- [x] Check-in button works correctly
-- [x] Check-out button appears after check-in
-- [x] Error handling works when API fails
-
-### Production Testing (Netlify)
-- [ ] Check-in button appears on page load
-- [ ] Check-in functionality works
-- [ ] Check-out functionality works
-- [ ] Attendance history loads correctly
-- [ ] Error messages display appropriately
+**Solution**: Added auto-creation logic in the attendance controller:
+- When an employee tries to check in or view attendance, the system checks if an Employee record exists
+- If not found, it automatically creates one with default values (morning shift, 09:00-14:00)
+- Uses a counter to generate unique employee IDs (EMP0001, EMP0002, etc.)
 
 ## Files Modified
-- `src/pages/employee/Attendance.jsx` - Enhanced error handling and button logic
 
-## Deployment Notes
-1. Push changes to GitHub
-2. Netlify will auto-deploy
-3. Test the attendance page after deployment
-4. Verify check-in/check-out functionality
+1. **rentx-netlify/netlify.toml**
+   - Added redirect rules for employee-attendance, employees, attendance, leave, and payroll routes
 
-## Expected Behavior After Fix
-- Check-in button will ALWAYS appear if user hasn't checked in yet
-- Even if API fails, user can still attempt to check in
-- Clear error messages guide users when issues occur
-- Fallback state ensures functionality is never completely blocked
+2. **rentx-netlify/src/pages/employee/Attendance.jsx**
+   - Changed API calls from `${backendUrl}/employee-attendance/...` to `/employee-attendance/...`
+   - Removed unused `backendUrl` import
+   - Improved error handling with specific error messages
+
+3. **rentx-netlify/netlify/functions/controllers/employeeAttendanceController.js**
+   - Added auto-creation of Employee records for users with employee role
+   - Improved error messages with more context
+   - Added logging for debugging
+
+4. **rentx-netlify/netlify/functions/api.js**
+   - Added debug endpoint for development: `/employee-attendance/debug/:userId`
+
+## Testing
+
+### Local Testing (Already Working)
+✅ All attendance endpoints work correctly in local development
+
+### Production Testing (After Deployment)
+After deploying these changes, test the following:
+
+1. **Check In**
+   - Navigate to `/employee/attendance`
+   - Click "Check In" button
+   - Should see success message
+
+2. **Check Out**
+   - After checking in, click "Check Out" button
+   - Should see success message with work duration
+
+3. **View History**
+   - Select month and year
+   - Should see attendance records in the table
+
+4. **Today's Status**
+   - Page should load without "Failed to fetch attendance status" error
+   - Should show current shift timing and status
+
+## Deployment Steps
+
+1. Commit all changes:
+   ```bash
+   git add .
+   git commit -m "Fix: Employee attendance endpoints for production deployment"
+   ```
+
+2. Push to your repository:
+   ```bash
+   git push origin main
+   ```
+
+3. Netlify will automatically deploy the changes
+
+4. Wait for deployment to complete (check Netlify dashboard)
+
+5. Test the attendance page in production
+
+## Additional Notes
+
+- The auto-creation feature ensures that any user with the "employee" role can immediately use the attendance system
+- Default shift is set to "morning" (09:00-14:00) but can be changed by admin in Employee Management
+- The system now provides better error messages to help diagnose issues
+- All changes are backward compatible with existing employee records
+
+## Why It Works Locally But Not in Production
+
+**Local Development (netlify dev)**:
+- Uses Express.js routing directly
+- All routes are handled by the Express app
+- No need for explicit redirects
+
+**Production (Netlify)**:
+- Uses serverless functions
+- Each request goes through Netlify's routing layer
+- Requires explicit redirect rules in `netlify.toml` to map URLs to functions
+- Without redirects, Netlify tries to serve static files and returns 404
+
+This is why the `netlify.toml` redirects are crucial for production deployment!

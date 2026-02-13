@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import BackButton from '../../components/BackButton';
 
 const Attendance = () => {
-  const { backendUrl, token, userData } = useAppContext();
+  const { token, userData } = useAppContext();
   const navigate = useNavigate();
   const [todayStatus, setTodayStatus] = useState(null);
   const [attendanceHistory, setAttendanceHistory] = useState([]);
@@ -19,13 +19,23 @@ const Attendance = () => {
   const fetchTodayStatus = useCallback(async () => {
     try {
       const { data } = await axios.get(
-        `${backendUrl}/employee-attendance/today/${userData._id}`,
+        `/employee-attendance/today/${userData._id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setTodayStatus(data);
     } catch (error) {
       console.error('Error fetching today status:', error);
-      toast.error('Failed to fetch attendance status');
+      console.error('Error details:', error.response?.data);
+      
+      // More specific error messages
+      if (error.response?.status === 404) {
+        toast.error('Employee record not found. Please contact admin.');
+      } else if (error.response?.status === 500) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to fetch attendance status');
+      }
+      
       // Set default state to allow check-in
       setTodayStatus({
         canCheckIn: true,
@@ -36,12 +46,12 @@ const Attendance = () => {
         attendance: null
       });
     }
-  }, [backendUrl, token, userData._id]);
+  }, [token, userData._id]);
 
   const fetchAttendanceHistory = useCallback(async () => {
     try {
       const { data } = await axios.get(
-        `${backendUrl}/employee-attendance/history/${userData._id}`,
+        `/employee-attendance/history/${userData._id}`,
         {
           params: { month: selectedMonth, year: selectedYear },
           headers: { Authorization: `Bearer ${token}` }
@@ -54,7 +64,7 @@ const Attendance = () => {
       setAttendanceHistory([]);
       setLoading(false);
     }
-  }, [backendUrl, token, userData._id, selectedMonth, selectedYear]);
+  }, [token, userData._id, selectedMonth, selectedYear]);
 
   useEffect(() => {
     if (userData?._id) {
@@ -74,7 +84,7 @@ const Attendance = () => {
     setCheckingIn(true);
     try {
       const { data } = await axios.post(
-        `${backendUrl}/employee-attendance/checkin`,
+        `/employee-attendance/checkin`,
         { userId: userData._id, attendanceMethod: 'manual', location: 'Office' },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -91,7 +101,7 @@ const Attendance = () => {
     setCheckingOut(true);
     try {
       const { data } = await axios.put(
-        `${backendUrl}/employee-attendance/checkout`,
+        `/employee-attendance/checkout`,
         { userId: userData._id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
