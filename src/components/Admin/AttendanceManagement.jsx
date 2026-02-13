@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../../context/AppContext';
 
 const AttendanceManagement = () => {
-  const { backendUrl, token } = useAppContext();
+  const { axios, token } = useAppContext();
   const [attendance, setAttendance] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -25,9 +24,7 @@ const AttendanceManagement = () => {
 
   const fetchEmployees = async () => {
     try {
-      const { data } = await axios.get(`${backendUrl}/employees`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.get('/employees');
       if (data.success) {
         setEmployees(data.employees);
       }
@@ -45,9 +42,7 @@ const AttendanceManagement = () => {
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.status) params.append('status', filters.status);
 
-      const { data } = await axios.get(`${backendUrl}/attendance?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.get(`/attendance?${params}`);
       if (data.success) {
         setAttendance(data.attendance);
       }
