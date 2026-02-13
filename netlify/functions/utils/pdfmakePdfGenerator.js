@@ -22,17 +22,25 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
   const diffTime = Math.abs(dropOffDate - pickupDate);
   const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
   const diffMinutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
-  // Format duration display - show as HH:MM for hours, or days if >= 24 hours
+  // Format duration display - show as hours and minutes, or days
   const formatDuration = () => {
     if (diffHours < 24) {
-      // Show as hours:minutes (e.g., "3:04" for 3 hours 4 minutes)
-      return `${diffHours}:${diffMinutes.toString().padStart(2, '0')}`;
-    } else if (diffDays === 1) {
-      return `1 day`;
+      // Less than 24 hours - show hours and minutes
+      if (diffMinutes > 0) {
+        return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''}`;
+      }
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+    } else if (diffDays === 1 && diffHours === 24) {
+      return '1 day';
     } else {
-      return `${diffDays} days`;
+      // More than 24 hours - show days and remaining hours
+      const remainingHours = diffHours % 24;
+      if (remainingHours > 0) {
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
+      }
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
     }
   };
   
