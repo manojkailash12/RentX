@@ -11,6 +11,14 @@
   node_bundler = "esbuild"
   external_node_modules = ["sharp", "canvas", "bcrypt", "@sparticuz/chromium", "puppeteer-core", "cloudinary", "multer-storage-cloudinary"]
 
+# Scheduled function for account deletion (runs every minute)
+[functions."scheduled-deletion"]
+  schedule = "* * * * *"  # Every minute
+
+# Function-specific settings
+[functions."api"]
+  timeout = 26  # Maximum timeout for analytics and complex operations
+
 [dev]
   command = "vite"
   port = 8888
@@ -68,11 +76,6 @@
 [[redirects]]
   from = "/user/roles"
   to = "/.netlify/functions/api/user/roles"
-  status = 200
-
-[[redirects]]
-  from = "/owner/add-car"
-  to = "/.netlify/functions/api/owner/add-car"
   status = 200
 
 [[redirects]]
@@ -178,6 +181,181 @@
 [[redirects]]
   from = "/admin/bookings"
   to = "/.netlify/functions/api/admin/bookings"
+  status = 200
+
+[[redirects]]
+  from = "/admin/replace-car"
+  to = "/.netlify/functions/api/admin/replace-car"
+  status = 200
+
+[[redirects]]
+  from = "/admin/available-cars"
+  to = "/.netlify/functions/api/admin/available-cars"
+  status = 200
+
+# Review Routes
+[[redirects]]
+  from = "/reviews/create"
+  to = "/.netlify/functions/api/reviews/create"
+  status = 200
+
+[[redirects]]
+  from = "/reviews/car/*"
+  to = "/.netlify/functions/api/reviews/car/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/reviews/user"
+  to = "/.netlify/functions/api/reviews/user"
+  status = 200
+
+[[redirects]]
+  from = "/reviews/*"
+  to = "/.netlify/functions/api/reviews/:splat"
+  status = 200
+
+# Chat Routes
+[[redirects]]
+  from = "/chat/conversation"
+  to = "/.netlify/functions/api/chat/conversation"
+  status = 200
+
+[[redirects]]
+  from = "/chat/conversations"
+  to = "/.netlify/functions/api/chat/conversations"
+  status = 200
+
+[[redirects]]
+  from = "/chat/messages/*"
+  to = "/.netlify/functions/api/chat/messages/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/chat/send"
+  to = "/.netlify/functions/api/chat/send"
+  status = 200
+
+[[redirects]]
+  from = "/chat/read/*"
+  to = "/.netlify/functions/api/chat/read/:splat"
+  status = 200
+
+# GPS Tracking Routes
+[[redirects]]
+  from = "/gps/start"
+  to = "/.netlify/functions/api/gps/start"
+  status = 200
+
+[[redirects]]
+  from = "/gps/update"
+  to = "/.netlify/functions/api/gps/update"
+  status = 200
+
+[[redirects]]
+  from = "/gps/stop"
+  to = "/.netlify/functions/api/gps/stop"
+  status = 200
+
+[[redirects]]
+  from = "/gps/booking/*"
+  to = "/.netlify/functions/api/gps/booking/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/gps/history/*"
+  to = "/.netlify/functions/api/gps/history/:splat"
+  status = 200
+
+# Loyalty Routes
+[[redirects]]
+  from = "/loyalty"
+  to = "/.netlify/functions/api/loyalty"
+  status = 200
+
+[[redirects]]
+  from = "/loyalty/redeem"
+  to = "/.netlify/functions/api/loyalty/redeem"
+  status = 200
+
+[[redirects]]
+  from = "/loyalty/history"
+  to = "/.netlify/functions/api/loyalty/history"
+  status = 200
+
+[[redirects]]
+  from = "/loyalty/calculate-discount"
+  to = "/.netlify/functions/api/loyalty/calculate-discount"
+  status = 200
+
+# Analytics Routes
+[[redirects]]
+  from = "/analytics"
+  to = "/.netlify/functions/api/analytics"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/overview"
+  to = "/.netlify/functions/api/analytics/overview"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/revenue"
+  to = "/.netlify/functions/api/analytics/revenue"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/bookings"
+  to = "/.netlify/functions/api/analytics/bookings"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/user-metrics"
+  to = "/.netlify/functions/api/analytics/user-metrics"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/owners"
+  to = "/.netlify/functions/api/analytics/owners"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/geographic"
+  to = "/.netlify/functions/api/analytics/geographic"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/export"
+  to = "/.netlify/functions/api/analytics/export"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/clear-cache"
+  to = "/.netlify/functions/api/analytics/clear-cache"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/car/*"
+  to = "/.netlify/functions/api/analytics/car/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/users"
+  to = "/.netlify/functions/api/analytics/users"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/update-payment-status"
+  to = "/.netlify/functions/api/bookings/update-payment-status"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/cancel/*"
+  to = "/.netlify/functions/api/bookings/cancel/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/bookings/resend-invoice/*"
+  to = "/.netlify/functions/api/bookings/resend-invoice/:splat"
   status = 200
 
 [[redirects]]

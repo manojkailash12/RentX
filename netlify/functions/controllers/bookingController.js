@@ -2,10 +2,11 @@ const Booking = require("../models/booking.js");
 const Car = require("../models/car.js");
 const User = require("../models/user.js");
 const { generateBookingInvoice } = require("../utils/pdfGenerator.js");
-const { sendBookingConfirmation } = require("../utils/emailService.js");
+const { sendBookingConfirmation, sendReviewReminder } = require("../utils/emailService.js");
 const { createServerlessResponse } = require("../utils/serverlessResponse.js");
 const axios = require("axios");
 const { calculateAccurateDistance, getDistanceFromDatabase } = require("../utils/distanceCalculator.js");
+const { earnPoints } = require("./loyaltyController.js");
 
 // function to check availability of car for a given date
 const checkAvailability = async (car, pickupDate, returnDate) => {
@@ -216,7 +217,8 @@ const createBooking = async (req, res) => {
       dropLocation,
       dropCity,
       pricingType = 'daily', // 'daily' or 'per_km'
-      paymentMethod 
+      paymentMethod,
+      insurance // { selected: boolean, type: 'basic'|'comprehensive'|'premium' }
     } = req.body;
 
     // Prevent admin from booking cars
@@ -287,17 +289,56 @@ const createBooking = async (req, res) => {
     }
 
     // Calculate commission and owner earnings
-    let ownerEarnings = totalAmount;
-    let platformEarnings = 0;
-    let commissionRate = 0;
+    // Commission structure:
+    // - Admin-owned cars: Platform gets 100% (admin earnings = platform earnings)
+    // - User-owned cars: Owner gets 40%, Platform gets 60%
+    // - Employee-owned cars: Owner gets 40%, Platform gets 60%
+    let ownerEarnings = 0;
+    let platformEarnings = totalAmount;
+    let commissionRate = 60;
 
-    if (carData.ownerType === 'user') {
-      // User-owned car: owner gets 60%, platform gets 40%
-      commissionRate = carData.commissionRate || 40;
-      platformEarnings = Math.round((totalAmount * commissionRate) / 100);
-      ownerEarnings = totalAmount - platformEarnings;
+    if (carData.ownerType === 'user' || carData.ownerType === 'employee') {
+      // User/Employee-owned car: owner gets 40%, platform gets 60%
+      ownerEarnings = Math.round((totalAmount * 40) / 100);
+      platformEarnings = totalAmount - ownerEarnings;
     }
-    // Admin-owned car: admin gets 100%
+    // Admin-owned car: platform gets 100%
+
+    // Handle insurance if selected
+    let insuranceData = { selected: false };
+    if (insurance && insurance.selected && insurance.type) {
+      const INSURANCE_PLANS = {
+        basic: { coverage: 500000, costPerDay: 200 },
+        comprehensive: { coverage: 1000000, costPerDay: 400 },
+        premium: { coverage: 2000000, costPerDay: 600 }
+      };
+
+      const plan = INSURANCE_PLANS[insurance.type];
+      if (plan) {
+        const insuranceCost = plan.costPerDay * totalDays;
+        insuranceData = {
+          selected: true,
+          type: insurance.type,
+          cost: insuranceCost,
+          coverage: plan.coverage,
+          provider: 'RentX Insurance'
+        };
+
+        // Add insurance cost to total
+        totalAmount += insuranceCost;
+        
+        // Adjust earnings with insurance cost
+        if (carData.ownerType === 'user' || carData.ownerType === 'employee') {
+          const additionalOwnerEarnings = Math.round(insuranceCost * 40 / 100);
+          const additionalPlatformEarnings = insuranceCost - additionalOwnerEarnings;
+          ownerEarnings += additionalOwnerEarnings;
+          platformEarnings += additionalPlatformEarnings;
+        } else {
+          // Admin car: all insurance goes to platform
+          platformEarnings += insuranceCost;
+        }
+      }
+    }
 
     // Create booking
     const booking = await Booking.create({
@@ -322,6 +363,7 @@ const createBooking = async (req, res) => {
       paymentMethod,
       paymentStatus: paymentMethod === 'cash' ? 'pay_at_dropoff' : 'paid',
       status: 'confirmed',
+      insurance: insuranceData,
       // Legacy fields for backward compatibility
       car: carId,
       user: _id,
@@ -356,6 +398,9 @@ const createBooking = async (req, res) => {
       pricingType,
       pricePerDay: carData.pricePerDay,
       pricePerKm,
+      basePrice: totalAmount - (insuranceData.cost || 0), // Base price without insurance
+      insurancePlan: insuranceData.selected ? insuranceData.type : null,
+      insuranceCost: insuranceData.selected ? insuranceData.cost : null,
       totalAmount,
       ownerEarnings,
       commissionRate,
@@ -402,18 +447,21 @@ const getUserBookings = async (req, res) => {
   }
 };
 
-// api to get owner/admin bookings
+// api to get owner/employee bookings (admin excluded)
 const getOwnerBookings = async (req, res) => {
   try {
-    // Allow admin and any logged-in user (users can see bookings for their cars)
+    // Allow employee and any logged-in user (users can see bookings for their cars)
     if(!req.user || !req.user._id){
         return res.json({success: false, message: "Unauthorized - Please login"});
     }
     
     let query = {};
-    if (req.user.role === 'admin') {
-      // Admin sees all bookings (no filter)
+    if (req.user.role === 'employee') {
+      // Employee sees all bookings (no filter)
       query = {};
+    } else if (req.user.role === 'admin') {
+      // Admin sees no bookings
+      return res.json({ success: true, bookings: [] });
     } else {
       // Regular users see bookings for their cars only
       query = {
@@ -442,22 +490,55 @@ const changeBookingStatus = async (req, res) => {
     const {_id} = req.user;
     const {bookingId, status} = req.body;
     
-    const booking = await Booking.findById(bookingId);
+    const booking = await Booking.findById(bookingId)
+      .populate('carId car userId user');
     if (!booking) {
       return res.json({success: false, message: "Booking not found"});
     }
     
-    // Check authorization
+    // Check authorization (employee only, not admin)
     const isOwner = booking.ownerId?.toString() === _id.toString() || 
                    booking.owner?.toString() === _id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isEmployee = req.user.role === 'employee';
     
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isEmployee) {
       return res.json({success: false, message: "Unauthorized"});
     }
     
+    const previousStatus = booking.status;
     booking.status = status;
     await booking.save();
+    
+    // Award loyalty points when booking is completed
+    if (status === 'completed' && previousStatus !== 'completed') {
+      try {
+        await earnPoints(bookingId);
+      } catch (error) {
+        console.error('Error awarding loyalty points:', error);
+        // Don't fail the status update if loyalty points fail
+      }
+      
+      // Send review reminder email when booking is completed
+      try {
+        const userData = booking.userId || booking.user;
+        const carData = booking.carId || booking.car;
+        
+        if (userData && userData.email) {
+          await sendReviewReminder(userData.email, {
+            userName: userData.name,
+            bookingId: booking.bookingId || booking._id,
+            carId: carData._id.toString(),
+            carName: `${carData.brand} ${carData.model}`,
+            pickupDate: booking.pickupDate,
+            returnDate: booking.returnDate
+          });
+          console.log(`✅ Review reminder email sent to ${userData.email}`);
+        }
+      } catch (emailError) {
+        console.error('Error sending review reminder email:', emailError);
+        // Don't fail the status update if email fails
+      }
+    }
     
     res.json({success: true, message: "Status updated successfully"});
   } catch (error) {
@@ -477,12 +558,12 @@ const updatePaymentStatus = async (req, res) => {
       return res.json({success: false, message: "Booking not found"});
     }
     
-    // Check authorization - only owner/admin can update payment status
+    // Check authorization - only owner/employee can update payment status (not admin)
     const isOwner = booking.ownerId?.toString() === _id.toString() || 
                    booking.owner?.toString() === _id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isEmployee = req.user.role === 'employee';
     
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isEmployee) {
       return res.json({success: false, message: "Unauthorized"});
     }
     
@@ -532,14 +613,14 @@ const downloadInvoice = async (req, res) => {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
     
-    // Check if user is authorized to download this invoice
+    // Check if user is authorized to download this invoice (employee only, not admin)
     const isBookingUser = booking.userId?._id.toString() === _id.toString() || 
                          booking.user?._id.toString() === _id.toString();
     const isOwner = booking.ownerId?._id.toString() === _id.toString() || 
                    booking.owner?._id.toString() === _id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isEmployee = req.user.role === 'employee';
     
-    if (!isBookingUser && !isOwner && !isAdmin) {
+    if (!isBookingUser && !isOwner && !isEmployee) {
       console.error('❌ Unauthorized access attempt by user:', _id);
       return res.status(403).json({ success: false, message: "Unauthorized" });
     }
@@ -555,7 +636,7 @@ const downloadInvoice = async (req, res) => {
     });
     
     const bookingDetails = {
-      bookingId: booking._id,
+      bookingId: booking.bookingId || booking._id, // Use formatted bookingId first, fallback to _id
       invoiceNumber: booking.invoiceNumber || `INV${Date.now().toString().slice(-3)}`,
       userName: userData.name,
       userEmail: userData.email,
@@ -577,6 +658,9 @@ const downloadInvoice = async (req, res) => {
       pricingType: booking.pricingType || 'daily',
       pricePerDay: booking.pricePerDay || carData.pricePerDay,
       pricePerKm: booking.pricePerKm || 15,
+      basePrice: booking.insurance?.selected ? (booking.totalAmount || booking.price) - (booking.insurance.cost || 0) : (booking.totalAmount || booking.price),
+      insurancePlan: booking.insurance?.selected ? booking.insurance.type : null,
+      insuranceCost: booking.insurance?.selected ? booking.insurance.cost : null,
       totalAmount: booking.totalAmount || booking.price,
       ownerEarnings: booking.ownerEarnings || booking.totalAmount || booking.price,
       commissionRate: booking.commissionRate || 0,
@@ -675,14 +759,14 @@ const resendInvoiceEmail = async (req, res) => {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
     
-    // Check if user owns this booking
+    // Check if user owns this booking (employee only, not admin)
     const isBookingUser = booking.userId?._id.toString() === _id.toString() || 
                          booking.user?._id.toString() === _id.toString();
     const isOwner = booking.ownerId?._id.toString() === _id.toString() || 
                    booking.owner?._id.toString() === _id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isEmployee = req.user.role === 'employee';
     
-    if (!isBookingUser && !isOwner && !isAdmin) {
+    if (!isBookingUser && !isOwner && !isEmployee) {
       console.error('❌ Unauthorized access attempt by user:', _id);
       return res.status(403).json({ success: false, message: "Unauthorized" });
     }
@@ -690,6 +774,11 @@ const resendInvoiceEmail = async (req, res) => {
     // Get car and user data
     const carData = booking.carId || booking.car;
     const userData = booking.userId || booking.user;
+    
+    if (!carData || !userData) {
+      console.error('❌ Missing car or user data');
+      return res.status(400).json({ success: false, message: "Incomplete booking data" });
+    }
     
     const bookingDetails = {
       bookingId: booking.bookingId || booking._id,
@@ -714,6 +803,9 @@ const resendInvoiceEmail = async (req, res) => {
       pricingType: booking.pricingType || 'daily',
       pricePerDay: booking.pricePerDay || carData.pricePerDay,
       pricePerKm: booking.pricePerKm || 15,
+      basePrice: booking.insurance?.selected ? (booking.totalAmount || booking.price) - (booking.insurance.cost || 0) : (booking.totalAmount || booking.price),
+      insurancePlan: booking.insurance?.selected ? booking.insurance.type : null,
+      insuranceCost: booking.insurance?.selected ? booking.insurance.cost : null,
       totalAmount: booking.totalAmount || booking.price,
       ownerEarnings: booking.ownerEarnings || booking.totalAmount || booking.price,
       commissionRate: booking.commissionRate || 0,
@@ -723,30 +815,139 @@ const resendInvoiceEmail = async (req, res) => {
       createdAt: booking.createdAt
     };
     
-    // Generate PDF
-    const pdfBuffer = await generateBookingInvoice(bookingDetails);
+    console.log('📄 Generating PDF invoice...');
+    
+    // Generate PDF with error handling
+    let pdfBuffer;
+    try {
+      pdfBuffer = await generateBookingInvoice(bookingDetails);
+      
+      // Ensure we have a valid buffer
+      if (!pdfBuffer) {
+        throw new Error('PDF buffer is null or undefined');
+      }
+      
+      // Convert to Buffer if it's not already
+      if (!Buffer.isBuffer(pdfBuffer)) {
+        console.log('⚠️ PDF output is not a Buffer, converting...');
+        pdfBuffer = Buffer.from(pdfBuffer);
+      }
+      
+      if (pdfBuffer.length === 0) {
+        throw new Error('PDF buffer is empty');
+      }
+      
+      console.log('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes');
+    } catch (pdfError) {
+      console.error('❌ PDF generation error:', pdfError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to generate invoice PDF: ' + pdfError.message 
+      });
+    }
+    
+    console.log('📧 Sending email to:', userData.email);
     
     // Send email with PDF attachment
-    const { sendBookingConfirmation } = require('../utils/emailService');
-    await sendBookingConfirmation(userData.email, bookingDetails, pdfBuffer);
+    try {
+      const { sendBookingConfirmation } = require('../utils/emailService');
+      await sendBookingConfirmation(userData.email, bookingDetails, pdfBuffer);
+      console.log('✅ Invoice email sent successfully to:', userData.email);
+    } catch (emailError) {
+      console.error('❌ Email sending error:', emailError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to send email: ' + emailError.message 
+      });
+    }
     
-    console.log('✅ Invoice email sent successfully to:', userData.email);
-    
-    res.json({ 
+    return res.json({ 
       success: true, 
       message: `Invoice sent successfully to ${userData.email}` 
     });
-    
   } catch (error) {
-    console.error('❌ Resend invoice error:', error.message);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    console.error('❌ Resend invoice error:', error);
+    return res.status(500).json({ 
       success: false, 
-      message: 'Failed to send invoice. Please try again later.',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Failed to resend invoice: ' + error.message 
     });
   }
 };
+
+// API to resend review email to user
+const resendReviewEmail = async (req, res) => {
+  try {
+    const { _id } = req.user;
+    const { bookingId } = req.params;
+    
+    console.log('📧 Resend review email request for booking:', bookingId);
+    
+    const booking = await Booking.findById(bookingId)
+      .populate('carId car userId user');
+    
+    if (!booking) {
+      console.error('❌ Booking not found:', bookingId);
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+    
+    // Check if user owns this booking
+    const isBookingUser = booking.userId?._id.toString() === _id.toString() || 
+                         booking.user?._id.toString() === _id.toString();
+    
+    if (!isBookingUser && req.user.role !== 'admin') {
+      console.error('❌ Unauthorized access attempt by user:', _id);
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+    
+    // Check if booking is completed
+    if (booking.status !== 'completed') {
+      return res.json({ 
+        success: false, 
+        message: "Review email can only be sent for completed bookings" 
+      });
+    }
+    
+    // Get car and user data
+    const carData = booking.carId || booking.car;
+    const userData = booking.userId || booking.user;
+    
+    if (!carData || !userData) {
+      console.error('❌ Missing car or user data');
+      return res.status(400).json({ success: false, message: "Incomplete booking data" });
+    }
+    
+    // Send review reminder email
+    try {
+      await sendReviewReminder(userData.email, {
+        userName: userData.name,
+        bookingId: booking.bookingId || booking._id,
+        carId: carData._id.toString(),
+        carName: `${carData.brand} ${carData.model}`,
+        pickupDate: booking.pickupDate,
+        returnDate: booking.returnDate
+      });
+      console.log(`✅ Review reminder email sent to ${userData.email}`);
+      
+      return res.json({ 
+        success: true, 
+        message: `Review email sent successfully to ${userData.email}` 
+      });
+    } catch (emailError) {
+      console.error('❌ Email sending error:', emailError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to send review email: ' + emailError.message 
+      });
+    }
+  } catch (error) {
+    console.error('❌ Resend review email error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to resend review email: ' + error.message 
+    });
+  }
+};
+
 
 module.exports = {
   checkSpecificCarAvailability,
@@ -759,5 +960,6 @@ module.exports = {
   calculateDistanceAPI,
   downloadInvoice,
   cancelUserBooking,
-  resendInvoiceEmail
+  resendInvoiceEmail,
+  resendReviewEmail
 };

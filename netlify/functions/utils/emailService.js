@@ -244,15 +244,32 @@ const sendBookingConfirmation = async (email, bookingDetails, pdfBuffer = null) 
 };
 
 // Send OTP email for registration verification
-const sendOTPEmail = async (email, otp, username, role = 'user') => {
+const sendOTPEmail = async (email, otp, username, role = 'user', verificationLink = null) => {
   const isAdmin = role === 'admin';
-  const userType = isAdmin ? 'Admin' : 'User';
-  const welcomeMessage = isAdmin ? 'Thank you for registering as an admin with RentX!' : 'Thank you for registering with RentX!';
+  const isEmployee = role === 'employee';
+  const userType = isAdmin ? 'Admin' : (isEmployee ? 'Employee' : 'User');
+  const welcomeMessage = isAdmin ? 'Thank you for registering as an admin with RentX!' : 
+                         (isEmployee ? 'Thank you for registering as an employee with RentX!' : 
+                          'Thank you for registering with RentX!');
   const adminNotice = isAdmin ? `
     <div style="background-color: #fff7ed; padding: 15px; margin: 20px 0; border-left: 4px solid #f97316; border-radius: 4px;">
       <p><strong>🔐 Admin Registration:</strong></p>
       <p>You are registering as an administrator. This account will have full access to manage the RentX system including vehicles, bookings, and user management.</p>
-    </div>` : '';
+    </div>` : (isEmployee ? `
+    <div style="background-color: #fff7ed; padding: 15px; margin: 20px 0; border-left: 4px solid #f97316; border-radius: 4px;">
+      <p><strong>👔 Employee Registration:</strong></p>
+      <p>You are registering as an employee. This account will have access to manage user cars, support tickets, reviews, and other employee functions.</p>
+    </div>` : '');
+
+  const verificationLinkSection = verificationLink ? `
+    <div style="text-align: center; margin: 30px 0;">
+      <p style="color: #9a3412; font-weight: 600; margin-bottom: 15px;">Or click the button below to verify instantly:</p>
+      <a href="${verificationLink}" style="display: inline-block; background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 10px rgba(251, 146, 60, 0.3);">
+        ✅ Verify Email Address
+      </a>
+      <p style="color: #9a3412; font-size: 12px; margin-top: 10px;">This link is valid for 24 hours</p>
+    </div>
+  ` : '';
 
   const htmlContent = `<!DOCTYPE html>
 <html>
@@ -352,22 +369,24 @@ const sendOTPEmail = async (email, otp, username, role = 'user') => {
   <div class="container">
     <div class="header">
       <div class="logo">🚗 RentX</div>
-      ${isAdmin ? '<div class="admin-badge">🔐 ADMIN REGISTRATION</div>' : ''}
+      ${isAdmin ? '<div class="admin-badge">🔐 ADMIN REGISTRATION</div>' : (isEmployee ? '<div class="admin-badge">👔 EMPLOYEE REGISTRATION</div>' : '')}
       <div class="title">📧 Email Verification</div>
     </div>
     
     <div class="message">
       <p>Hello <strong style="color: #c2410c;">${username}</strong>,</p>
-      <p>${welcomeMessage} To complete your ${userType.toLowerCase()} account setup, please verify your email address using the OTP code below:</p>
+      <p>${welcomeMessage} To complete your <strong>${userType.toLowerCase()} account</strong> setup, please verify your email address using the OTP code below:</p>
     </div>
     
     ${adminNotice}
     
     <div class="otp-container">
-      <p style="margin: 0; color: #c2410c; font-weight: bold; font-size: 16px;">🔑 Your Verification Code</p>
+      <p style="margin: 0; color: #c2410c; font-weight: bold; font-size: 16px;">� Your Verification Code</p>
       <div class="otp-code">${otp}</div>
       <p style="margin: 0; color: #9a3412; font-size: 14px; font-weight: 600;">⏰ Valid for 10 minutes</p>
     </div>
+    
+    ${verificationLinkSection}
     
     <div class="message">
       <p>Enter this code in the verification page to activate your ${userType.toLowerCase()} account and start ${isAdmin ? 'managing the RentX system' : 'booking vehicles'}.</p>
@@ -556,11 +575,15 @@ const sendPasswordResetOTP = async (email, otp, username) => {
 };
 
 // Send welcome email after successful verification
-const sendWelcomeEmail = async (email, username, isAdmin = false) => {
+const sendWelcomeEmail = async (email, username, role = 'user') => {
   try {
     const transporter = createTransporter();
-    const userType = isAdmin ? 'Admin' : 'User';
-    const welcomeTitle = isAdmin ? 'Welcome to RentX Admin Panel!' : 'Welcome to RentX!';
+    const isAdmin = role === 'admin';
+    const isEmployee = role === 'employee';
+    const userType = isAdmin ? 'Admin' : (isEmployee ? 'Employee' : 'User');
+    const welcomeTitle = isAdmin ? 'Welcome to RentX Admin Panel!' : 
+                         (isEmployee ? 'Welcome to RentX Employee Portal!' : 
+                          'Welcome to RentX!');
     const features = isAdmin ? [
       '🚗 Manage vehicle inventory and availability',
       '📊 View and manage all bookings',
@@ -568,6 +591,13 @@ const sendWelcomeEmail = async (email, username, isAdmin = false) => {
       '📈 Access analytics and reports',
       '⚙️ System configuration and settings',
       '📞 Priority admin support'
+    ] : (isEmployee ? [
+      '✅ Approve user car listings',
+      '🎫 Manage support tickets',
+      '⭐ Moderate reviews',
+      '💬 Handle customer chat support',
+      '👥 View and manage users',
+      '📊 Access employee dashboard'
     ] : [
       '🚗 Browse and book from our wide range of vehicles',
       '📱 Manage your bookings easily',
@@ -575,10 +605,12 @@ const sendWelcomeEmail = async (email, username, isAdmin = false) => {
       '💳 Choose between online payment or cash on delivery',
       '⭐ Rate and review your rental experience',
       '📞 24/7 customer support'
-    ];
+    ]);
     const nextSteps = isAdmin ? 
       'Ready to manage the system? Log in to your admin account and access the admin dashboard!' :
-      'Ready to start your journey? Log in to your account and explore our available vehicles!';
+      (isEmployee ? 
+       'Ready to start working? Log in to your employee account and access the employee dashboard!' :
+       'Ready to start your journey? Log in to your account and explore our available vehicles!');
 
     const htmlContent = `<!DOCTYPE html>
 <html>
@@ -665,7 +697,7 @@ const sendWelcomeEmail = async (email, username, isAdmin = false) => {
   <div class="container">
     <div class="header">
       <div class="logo">🚗 RentX</div>
-      ${isAdmin ? '<div class="admin-badge">🔐 ADMIN ACCOUNT</div>' : ''}
+      ${isAdmin ? '<div class="admin-badge">🔐 ADMIN ACCOUNT</div>' : (isEmployee ? '<div class="admin-badge">👔 EMPLOYEE ACCOUNT</div>' : '')}
     </div>
     
     <div class="welcome-message">
@@ -702,7 +734,7 @@ const sendWelcomeEmail = async (email, username, isAdmin = false) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: `Welcome to RentX ${isAdmin ? 'Admin Panel' : ''} - Account Verified!`,
+      subject: `Welcome to RentX ${isAdmin ? 'Admin Panel' : (isEmployee ? 'Employee Portal' : '')} - Account Verified!`,
       html: htmlContent,
     };
 
@@ -941,11 +973,415 @@ const sendCarReplacementEmail = async (email, replacementDetails) => {
   }
 };
 
+// Send review reminder email
+const { generateReviewEmailHTML } = require('./emailReviewTemplate');
+
+const sendReviewReminder = async (email, bookingDetails) => {
+  const htmlContent = generateReviewEmailHTML(bookingDetails, email);
+  
+  const transporter = createTransporter();
+  
+  const mailOptions = {
+    from: `"RentX Car Rental" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: '⭐ Share Your Experience - RentX Car Rental',
+    html: htmlContent
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Review reminder email sent to ${email}`);
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Review reminder email error:', error);
+    throw error;
+  }
+};
+
+// Send account deletion confirmation email
+const sendAccountDeletionEmail = async (email, userName) => {
+  const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Account Deleted - RentX</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #fff7ed;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(251, 146, 60, 0.15);
+      border: 2px solid #fed7aa;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      padding: 20px;
+      border-radius: 10px;
+      margin: -30px -30px 30px -30px;
+    }
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    .message {
+      color: #9a3412;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .info-box {
+      background-color: #fff7ed;
+      padding: 20px;
+      border-left: 4px solid #f97316;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px solid #fed7aa;
+      color: #9a3412;
+      font-size: 14px;
+      background-color: #fff7ed;
+      padding: 20px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🚗 RentX</div>
+      <p style="color: white; margin: 0; font-size: 16px;">Account Deletion Confirmation</p>
+    </div>
+    
+    <div class="message">
+      <p>Dear ${userName},</p>
+      <p><strong>Your Account Has Been Deleted Permanently</strong></p>
+      <p>As per your request, your RentX account has been permanently deleted from our system.</p>
+    </div>
+    
+    <div class="info-box">
+      <p style="color: #c2410c;"><strong>What has been removed:</strong></p>
+      <ul style="margin: 10px 0; padding-left: 20px; color: #9a3412;">
+        <li>Your account and profile information</li>
+        <li>Your personal data</li>
+        <li>Your booking history</li>
+        <li>Your conversations and messages</li>
+        <li>All associated data from our database</li>
+      </ul>
+    </div>
+    
+    <div class="message">
+      <p>If you change your mind in the future, you're always welcome to create a new account with RentX.</p>
+      <p>Thank you for being a part of the RentX community.</p>
+    </div>
+    
+    <div class="footer">
+      <p style="font-weight: bold; color: #c2410c; font-size: 16px;">🙏 Thank You</p>
+      <p><strong>RentX Team</strong></p>
+      <p style="margin-top: 15px; font-size: 12px;">📧 This is an automated email. Please do not reply to this message.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Account Deleted - RentX",
+    html: htmlContent,
+  };
+
+  try {
+    const transporter = createTransporter();
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Account deletion email sent successfully to ${email}:`, info.response);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`Error sending account deletion email to ${email}:`, error);
+    throw error;
+  }
+};
+
+// Generic send email function for support and other purposes
+const sendEmail = async ({ to, subject, html, attachments = [] }) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to,
+    subject,
+    html,
+  };
+
+  if (attachments && attachments.length > 0) {
+    mailOptions.attachments = attachments;
+  }
+
+  try {
+    const transporter = createTransporter();
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email sent successfully to ${to}:`, info.response);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`Error sending email to ${to}:`, error);
+    throw error;
+  }
+};
+
+// Send payslip email
+const sendPayslipEmail = async (email, payrollData, employeeData, userData, pdfBuffer) => {
+  const getMonthName = (month) => {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                   'July', 'August', 'September', 'October', 'November', 'December'];
+    return months[month - 1];
+  };
+
+  const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString('en-IN')}`;
+
+  const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Payslip - RentX</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #fff7ed;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(255, 107, 53, 0.15);
+      border: 2px solid #fed7aa;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, #FF6B35, #f97316);
+      padding: 20px;
+      border-radius: 10px;
+      margin: -30px -30px 30px -30px;
+    }
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    .success-message {
+      background: linear-gradient(135deg, #fed7aa, #fdba74);
+      padding: 25px;
+      text-align: center;
+      border-radius: 12px;
+      margin: 20px 0;
+      border: 2px solid #FF6B35;
+    }
+    .details {
+      background-color: #fff7ed;
+      padding: 25px;
+      border-radius: 12px;
+      margin: 20px 0;
+      border: 2px solid #fed7aa;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #fed7aa;
+    }
+    .label {
+      font-weight: bold;
+      color: #c2410c;
+    }
+    .value {
+      color: #9a3412;
+      font-weight: 600;
+    }
+    .amount {
+      background: linear-gradient(135deg, #fed7aa, #fdba74);
+      padding: 20px;
+      text-align: center;
+      border-radius: 12px;
+      margin: 20px 0;
+      border: 2px solid #FF6B35;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px solid #fed7aa;
+      color: #9a3412;
+      font-size: 14px;
+      background-color: #fff7ed;
+      padding: 20px;
+      border-radius: 10px;
+    }
+    .highlight {
+      background: linear-gradient(135deg, #FF6B35, #f97316);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🚗 RentX</div>
+      <p style="color: white; margin: 0; font-size: 16px;">Employee Payslip</p>
+    </div>
+    
+    <div class="success-message">
+      <h2 style="color: #c2410c; margin: 0; font-size: 28px;">💰 Payslip Generated!</h2>
+      <p style="margin: 10px 0; color: #9a3412; font-weight: 600;">Your salary for ${getMonthName(payrollData.month)} ${payrollData.year}</p>
+    </div>
+    
+    <div class="details">
+      <h3 style="color: #c2410c; margin-top: 0; font-size: 20px;">📋 Payslip Details</h3>
+      
+      <div class="detail-row">
+        <span class="label">Employee ID:</span>
+        <span class="value highlight">${employeeData.employeeId}</span>
+      </div>
+      
+      <div class="detail-row">
+        <span class="label">Employee Name:</span>
+        <span class="value">${userData.name}</span>
+      </div>
+      
+      <div class="detail-row">
+        <span class="label">Period:</span>
+        <span class="value">${getMonthName(payrollData.month)} ${payrollData.year}</span>
+      </div>
+      
+      <div class="detail-row">
+        <span class="label">Total Days Worked:</span>
+        <span class="value">${payrollData.attendance.totalDays}</span>
+      </div>
+      
+      <div class="detail-row">
+        <span class="label">Total Shifts:</span>
+        <span class="value">${payrollData.attendance.totalShifts}</span>
+      </div>
+      
+      <div class="detail-row">
+        <span class="label">Work Hours:</span>
+        <span class="value">${payrollData.workHours.actual.toFixed(2)} hrs</span>
+      </div>
+      
+      <div class="detail-row">
+        <span class="label">Base Salary:</span>
+        <span class="value">${formatCurrency(payrollData.salary.base)}</span>
+      </div>
+      
+      <div class="detail-row">
+        <span class="label">Calculated Salary:</span>
+        <span class="value">${formatCurrency(payrollData.salary.calculated)}</span>
+      </div>
+      
+      ${payrollData.salary.overtime > 0 ? `
+      <div class="detail-row">
+        <span class="label">Overtime Pay:</span>
+        <span class="value">${formatCurrency(payrollData.salary.overtime)}</span>
+      </div>` : ''}
+      
+      ${payrollData.salary.bonuses > 0 ? `
+      <div class="detail-row">
+        <span class="label">Bonuses:</span>
+        <span class="value">${formatCurrency(payrollData.salary.bonuses)}</span>
+      </div>` : ''}
+      
+      ${payrollData.salary.deductions > 0 ? `
+      <div class="detail-row">
+        <span class="label">Deductions:</span>
+        <span class="value">-${formatCurrency(payrollData.salary.deductions)}</span>
+      </div>` : ''}
+      
+      <div class="detail-row">
+        <span class="label">Insurance:</span>
+        <span class="value">Free</span>
+      </div>
+      
+      <div class="detail-row">
+        <span class="label">Payment Status:</span>
+        <span class="value">${payrollData.status.toUpperCase()}</span>
+      </div>
+    </div>
+    
+    <div class="amount">
+      <h3 style="margin: 0; color: #c2410c; font-size: 24px;">💰 Net Salary: ${formatCurrency(payrollData.salary.net)}</h3>
+      <p style="margin: 5px 0; color: #9a3412; font-weight: 600;">
+        ${payrollData.status === 'paid' ? '✅ Payment Completed' : '⏳ Payment Pending'}
+      </p>
+    </div>
+    
+    <div class="footer">
+      <p><strong style="color: #c2410c;">📎 Attachment:</strong></p>
+      <p style="line-height: 1.6;">
+        Your detailed payslip PDF is attached to this email.<br>
+        Please download and keep it for your records.
+      </p>
+      <p style="margin-top: 20px; font-size: 16px; font-weight: bold; color: #c2410c;">🙏 Thank you for your hard work!</p>
+      <p style="margin-top: 15px; font-size: 12px; color: #9a3412;">📧 This is an automated email. Please do not reply to this message.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `💰 Payslip - ${getMonthName(payrollData.month)} ${payrollData.year} - RentX`,
+    html: htmlContent,
+    attachments: [{
+      filename: `RentX-Payslip-${employeeData.employeeId}-${getMonthName(payrollData.month)}-${payrollData.year}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf'
+    }]
+  };
+
+  try {
+    const transporter = createTransporter();
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Payslip email sent successfully to ${email}:`, info.response);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`❌ Error sending payslip email to ${email}:`, error);
+    throw error;
+  }
+};
+
 module.exports = { 
   generateOTP, 
   sendOTPEmail, 
   sendBookingConfirmation, 
   sendPasswordResetOTP, 
   sendWelcomeEmail,
-  sendCarReplacementEmail
+  sendCarReplacementEmail,
+  sendReviewReminder,
+  sendAccountDeletionEmail,
+  sendEmail,
+  sendPayslipEmail
 };

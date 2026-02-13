@@ -5,8 +5,15 @@ import Loader from "../components/Loader";
 import { useAppContext } from "../context/AppContext";
 import toast from "react-hot-toast";
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
+import ReviewList from "../components/Reviews/ReviewList";
+import ReviewForm from "../components/Reviews/ReviewForm";
+import OwnerResponseForm from "../components/Reviews/OwnerResponseForm";
+import ContactOwnerButton from "../components/ContactOwnerButton";
+import InsuranceSelector from "../components/Insurance/InsuranceSelector";
 
 const CarDetails = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { cars, axios, user, isAdmin } = useAppContext()
   const navigate = useNavigate();
@@ -26,6 +33,11 @@ const CarDetails = () => {
   const [calculatingDistance, setCalculatingDistance] = useState(false);
   const [availabilityStatus, setAvailabilityStatus] = useState(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [userCompletedBookings, setUserCompletedBookings] = useState([]);
+  const [unreviewedBookings, setUnreviewedBookings] = useState([]);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewsKey, setReviewsKey] = useState(0);
+  const [selectedInsurance, setSelectedInsurance] = useState(null);
   const currency = import.meta.env.VITE_CURRENCY
   const pricePerKm = 15; // Fixed price per km for all vehicles
 
@@ -99,7 +111,8 @@ const CarDetails = () => {
         dropLocation,
         dropCity,
         pricingType,
-        paymentMethod
+        paymentMethod,
+        insurance: selectedInsurance
       })
       
       if (data.success) {
@@ -212,15 +225,23 @@ const CarDetails = () => {
   const getTotalAmount = () => {
     if (!car) return 0;
     
+    let baseAmount = 0;
     if (pricingType === 'per_km') {
       // Per kilometer pricing - calculate round trip (up + down)
       const roundTripDistance = distance * 2; // Double the distance for round trip
-      return Math.round(roundTripDistance * pricePerKm);
+      baseAmount = Math.round(roundTripDistance * pricePerKm);
     } else {
       // Daily pricing
       const days = calculateDays();
-      return Math.round(car.pricePerDay * days);
+      baseAmount = Math.round(car.pricePerDay * days);
     }
+    
+    // Add insurance cost if selected
+    if (selectedInsurance && selectedInsurance.cost) {
+      baseAmount += selectedInsurance.cost;
+    }
+    
+    return baseAmount;
   }
 
   const formatDuration = (days) => {
@@ -249,6 +270,60 @@ const CarDetails = () => {
     setCar(cars.find(car => car._id === id));
   }, [cars, id]);
 
+  // Check if user has completed bookings for this car
+  useEffect(() => {
+    const checkUserBookings = async () => {
+      if (user && id && !isAdmin) {
+        try {
+          // Fetch user's bookings
+          const bookingsResponse = await axios.get('/bookings/my-bookings', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const completedBookings = bookingsResponse.data.bookings?.filter(
+            booking => booking.carId === id && booking.status === 'completed'
+          ) || [];
+          setUserCompletedBookings(completedBookings);
+
+          // Fetch user's reviews to filter out already reviewed bookings
+          const reviewsResponse = await axios.get('/reviews/user', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const userReviews = reviewsResponse.data.reviews || [];
+          const reviewedBookingIds = new Set(
+            userReviews.map(review => review.bookingId?._id || review.bookingId)
+          );
+
+          // Filter out bookings that already have reviews
+          const unreviewed = completedBookings.filter(
+            booking => !reviewedBookingIds.has(booking._id)
+          );
+          setUnreviewedBookings(unreviewed);
+        } catch (error) {
+          console.error('Error checking bookings:', error);
+        }
+      }
+    };
+    checkUserBookings();
+  }, [user, id, isAdmin, reviewsKey]); // Add reviewsKey to refresh after review submission
+
+  const handleReviewSuccess = () => {
+    setShowReviewForm(false);
+    setReviewsKey(prev => prev + 1); // Force ReviewList to reload
+    toast.success('Thank you for your review!');
+  };
+
+  const renderStars = (rating) => {
+    return (
+      <div className="flex text-yellow-400">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span key={star} className="text-xl">
+            {star <= Math.round(rating) ? '★' : '☆'}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   return car ? (
     <div className="px-6 md:px-16 lg:px-24 xl:px-32 mt-8">
       <button
@@ -256,7 +331,7 @@ const CarDetails = () => {
         className="flex items-center gap-2 mb-4 text-gray-500 cursor-pointer text-sm"
       >
         <img src={assets.arrow_icon} alt="" className="rotate-180 opacity-65 h-4" />
-        Back to all cars
+        {t('carDetails.backToAll')}
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -288,7 +363,7 @@ const CarDetails = () => {
               </p>
               {car.ownerType === 'user' && (
                 <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block mt-1">
-                  Listed by User • Commission: {car.commissionRate || 40}%
+                  Listed by User • Commission: {car.commissionRate || 60}%
                 </p>
               )}
             </div>
@@ -318,13 +393,13 @@ const CarDetails = () => {
             </div>
             {/* description */}
             <div>
-              <h1 className="text-lg font-medium mb-2">Description</h1>
+              <h1 className="text-lg font-medium mb-2">{t('carDetails.description')}</h1>
               <p className="text-gray-500 text-sm">{car.description}</p>
             </div>
 
             {/* feature */}
             <div>
-              <h1 className="text-lg font-medium mb-2">Features</h1>
+              <h1 className="text-lg font-medium mb-2">{t('carDetails.features')}</h1>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {
                   ["360 Camera", "Bluetooth", "GPS", "Heated Seats", "Rear View Mirror"].map((item) => (
@@ -349,9 +424,9 @@ const CarDetails = () => {
             className="shadow-lg h-max sticky top-18 rounded-xl p-6 space-y-6 text-gray-500"
           >
             <div className="text-center">
-              <h2 className="text-2xl text-gray-800 font-semibold mb-2">Vehicle Details</h2>
+              <h2 className="text-2xl text-gray-800 font-semibold mb-2">{t('carDetails.vehicleDetails')}</h2>
               <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-                Admin View
+                {t('carDetails.adminView')}
               </span>
             </div>
 
@@ -359,59 +434,72 @@ const CarDetails = () => {
 
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium text-gray-400 mb-1">Pricing</h3>
+                <h3 className="text-sm font-medium text-gray-400 mb-1">{t('carDetails.pricing')}</h3>
                 <p className="text-2xl text-gray-800 font-semibold">
                   Rs. {car.pricePerDay.toLocaleString('en-IN')} 
-                  <span className="text-base text-gray-400 font-normal"> per day</span>
+                  <span className="text-base text-gray-400 font-normal"> {t('carDetails.perDay')}</span>
                 </p>
               </div>
 
               <div>
-                <h3 className="text-sm font-medium text-gray-400 mb-1">Status</h3>
+                <h3 className="text-sm font-medium text-gray-400 mb-1">{t('carDetails.status')}</h3>
                 <div className="flex gap-2 flex-wrap">
-                  <span className={`px-3 py-1 rounded-full text-sm ${
-                    car.isAvailable ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {car.isAvailable ? 'Available' : 'Unavailable'}
-                  </span>
+                  {car.isCurrentlyBooked ? (
+                    <span className="px-3 py-1 rounded-full text-sm bg-red-100 text-red-700">
+                      Currently Booked
+                    </span>
+                  ) : car.isAvailable ? (
+                    <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+                      {t('carDetails.available')}
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700">
+                      {t('carDetails.unavailable')}
+                    </span>
+                  )}
                   <span className={`px-3 py-1 rounded-full text-sm ${
                     car.isApproved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {car.isApproved ? 'Approved' : 'Pending Approval'}
+                    {car.isApproved ? t('carDetails.approved') : t('carDetails.pendingApproval')}
                   </span>
                 </div>
+                {car.isCurrentlyBooked && car.bookedUntil && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Available after: {new Date(car.bookedUntil).toLocaleDateString()} {new Date(car.bookedUntil).toLocaleTimeString()}
+                  </p>
+                )}
               </div>
 
               <div>
-                <h3 className="text-sm font-medium text-gray-400 mb-1">Owner Type</h3>
+                <h3 className="text-sm font-medium text-gray-400 mb-1">{t('carDetails.ownerType')}</h3>
                 <span className={`px-3 py-1 rounded-full text-sm ${
                   car.ownerType === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
                 }`}>
-                  {car.ownerType === 'admin' ? 'Platform Car' : 'User Listed'}
+                  {car.ownerType === 'admin' ? t('carDetails.platformCar') : t('carDetails.userListed')}
                 </span>
               </div>
 
               {car.ownerType === 'user' && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-400 mb-1">Commission Rate</h3>
-                  <p className="text-lg font-medium text-blue-600">{car.commissionRate || 40}%</p>
+                  <h3 className="text-sm font-medium text-gray-400 mb-1">{t('carDetails.commissionRate')}</h3>
+                  <p className="text-lg font-medium text-blue-600">{car.commissionRate || 60}%</p>
                 </div>
               )}
 
               <div>
-                <h3 className="text-sm font-medium text-gray-400 mb-1">Location</h3>
+                <h3 className="text-sm font-medium text-gray-400 mb-1">{t('carDetails.location')}</h3>
                 <p className="text-gray-700">{car.location}</p>
               </div>
 
               {car.rejectionReason && (
                 <div className="bg-red-50 p-3 rounded-lg">
-                  <h3 className="text-sm font-medium text-red-700 mb-1">Rejection Reason</h3>
+                  <h3 className="text-sm font-medium text-red-700 mb-1">{t('carDetails.rejectionReason')}</h3>
                   <p className="text-sm text-red-600">{car.rejectionReason}</p>
                 </div>
               )}
 
               <div>
-                <h3 className="text-sm font-medium text-gray-400 mb-1">Car ID</h3>
+                <h3 className="text-sm font-medium text-gray-400 mb-1">{t('carDetails.carId')}</h3>
                 <p className="text-xs text-gray-500 font-mono">{car._id}</p>
               </div>
             </div>
@@ -423,18 +511,18 @@ const CarDetails = () => {
                 onClick={() => navigate(`/owner/edit-car/${car._id}`)}
                 className="w-full bg-primary hover:bg-primary-dull transition-all py-3 font-medium text-white rounded-xl"
               >
-                Edit Car Details
+                {t('carDetails.editCarDetails')}
               </button>
               <button
                 onClick={() => navigate('/owner/manage-cars')}
                 className="w-full bg-gray-100 hover:bg-gray-200 transition-all py-3 font-medium text-gray-700 rounded-xl"
               >
-                Back to Manage Cars
+                {t('carDetails.backToManage')}
               </button>
             </div>
 
             <p className="text-center text-xs text-gray-500">
-              🔒 Admin view - Booking functionality disabled
+              🔒 {t('carDetails.adminViewNote')}
             </p>
           </motion.div>
         ) : (
@@ -451,12 +539,12 @@ const CarDetails = () => {
               {pricingType === 'daily' ? (
                 <>
                   Rs. {car.pricePerDay.toLocaleString('en-IN')} 
-                  <span className="text-sm text-gray-400 font-normal"> per day</span>
+                  <span className="text-sm text-gray-400 font-normal"> {t('carDetails.perDay')}</span>
                 </>
               ) : (
                 <>
                   Rs. {pricePerKm} 
-                  <span className="text-sm text-gray-400 font-normal"> per km</span>
+                  <span className="text-sm text-gray-400 font-normal"> {t('carDetails.perKm')}</span>
                 </>
               )}
             </p>
@@ -472,7 +560,7 @@ const CarDetails = () => {
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                Daily Rental
+                {t('carDetails.dailyRental')}
               </button>
               <button
                 type="button"
@@ -492,7 +580,7 @@ const CarDetails = () => {
 
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <label htmlFor="pickup-location" className="text-xs">Pickup Location</label>
+              <label htmlFor="pickup-location" className="text-xs">{t('carDetails.pickupLocation')}</label>
               <input 
                 value={pickupLocation} 
                 onChange={(e) => setPickupLocation(e.target.value)} 
@@ -505,7 +593,7 @@ const CarDetails = () => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="pickup-city" className="text-xs">Pickup City</label>
+              <label htmlFor="pickup-city" className="text-xs">{t('carDetails.pickupCity')}</label>
               <input 
                 value={pickupCity} 
                 onChange={(e) => setPickupCity(e.target.value)} 
@@ -520,7 +608,7 @@ const CarDetails = () => {
 
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <label htmlFor="drop-location" className="text-xs">Drop-off Location</label>
+              <label htmlFor="drop-location" className="text-xs">{t('carDetails.dropoffLocation')}</label>
               <input 
                 value={dropLocation} 
                 onChange={(e) => setDropLocation(e.target.value)} 
@@ -533,7 +621,7 @@ const CarDetails = () => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="drop-city" className="text-xs">Drop-off City</label>
+              <label htmlFor="drop-city" className="text-xs">{t('carDetails.dropoffCity')}</label>
               <input 
                 value={dropCity} 
                 onChange={(e) => setDropCity(e.target.value)} 
@@ -548,7 +636,7 @@ const CarDetails = () => {
 
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <label htmlFor="pickup-date" className="text-xs">Pickup Date</label>
+              <label htmlFor="pickup-date" className="text-xs">{t('carDetails.pickupDate')}</label>
               <input 
                 value={pickupDate} 
                 onChange={(e) => setPickupDate(e.target.value)} 
@@ -561,7 +649,7 @@ const CarDetails = () => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="pickup-time" className="text-xs">Pickup Time</label>
+              <label htmlFor="pickup-time" className="text-xs">{t('carDetails.pickupTime')}</label>
               <input 
                 value={pickupTime} 
                 onChange={(e) => setPickupTime(e.target.value)} 
@@ -575,7 +663,7 @@ const CarDetails = () => {
 
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <label htmlFor="return-date" className="text-xs">Return Date</label>
+              <label htmlFor="return-date" className="text-xs">{t('carDetails.returnDate')}</label>
               <input 
                 value={returnDate} 
                 onChange={(e) => setReturnDate(e.target.value)} 
@@ -588,7 +676,7 @@ const CarDetails = () => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="return-time" className="text-xs">Return Time</label>
+              <label htmlFor="return-time" className="text-xs">{t('carDetails.returnTime')}</label>
               <input 
                 value={returnTime} 
                 onChange={(e) => setReturnTime(e.target.value)} 
@@ -611,18 +699,18 @@ const CarDetails = () => {
               {checkingAvailability ? (
                 <div className="flex items-center gap-2 text-gray-600">
                   <div className="animate-spin h-3 w-3 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                  <span>Checking availability...</span>
+                  <span>{t('carDetails.checkingAvailability')}</span>
                 </div>
               ) : availabilityStatus?.available ? (
                 <div className="flex items-center gap-2 text-green-700">
                   <span>✅</span>
-                  <span className="font-medium">Available for selected dates!</span>
+                  <span className="font-medium">{t('carDetails.availableForDates')}</span>
                 </div>
               ) : availabilityStatus?.success === false ? (
                 <div className="text-red-700">
                   <div className="flex items-center gap-2 mb-1">
                     <span>❌</span>
-                    <span className="font-medium">Not available</span>
+                    <span className="font-medium">{t('carDetails.notAvailableForDates')}</span>
                   </div>
                   <p className="text-xs">{availabilityStatus.message}</p>
                 </div>
@@ -631,10 +719,10 @@ const CarDetails = () => {
           )}
 
           <div className="flex flex-col gap-1">
-            <label htmlFor="payment-method" className="text-xs">Payment Method</label>
+            <label htmlFor="payment-method" className="text-xs">{t('carDetails.paymentMethod')}</label>
             <div className="border border-borderColor px-2 py-1.5 rounded-lg bg-gray-50 text-sm">
-              <span className="text-gray-700">Cash on Delivery</span>
-              <p className="text-xs text-gray-500 mt-0.5">Pay when you receive the car</p>
+              <span className="text-gray-700">{t('carDetails.cashOnDelivery')}</span>
+              <p className="text-xs text-gray-500 mt-0.5">{t('carDetails.payWhenReceive')}</p>
             </div>
             <input type="hidden" value="cash" />
           </div>
@@ -642,24 +730,32 @@ const CarDetails = () => {
           {pickupLocation && pickupCity && dropLocation && dropCity && (
             <div className="bg-blue-50 p-2 rounded-lg text-xs">
               <div className="flex justify-between">
-                <span>One-way Distance:</span>
+                <span>{t('carDetails.oneWayDistance')}</span>
                 <span>
                   {calculatingDistance ? (
-                    <span className="text-blue-600">Calculating...</span>
+                    <span className="text-blue-600">{t('carDetails.calculating')}</span>
                   ) : distance > 0 ? (
                     <span className="font-medium">{distance} km</span>
                   ) : (
-                    <span className="text-gray-400">Enter locations</span>
+                    <span className="text-gray-400">{t('carDetails.enterLocations')}</span>
                   )}
                 </span>
               </div>
               {distance > 0 && pricingType === 'per_km' && (
                 <div className="flex justify-between mt-0.5">
-                  <span>Round Trip:</span>
+                  <span>{t('carDetails.roundTrip')}</span>
                   <span className="font-medium text-green-600">{distance * 2} km</span>
                 </div>
               )}
             </div>
+          )}
+
+          {pickupDate && returnDate && pickupTime && returnTime && (
+            <InsuranceSelector
+              totalDays={calculateDays()}
+              onInsuranceSelect={setSelectedInsurance}
+              selectedInsurance={selectedInsurance}
+            />
           )}
 
           {((pickupDate && returnDate && pickupTime && returnTime && pricingType === 'daily') || 
@@ -668,29 +764,29 @@ const CarDetails = () => {
               {pricingType === 'daily' ? (
                 <>
                   <div className="flex justify-between">
-                    <span>Duration:</span>
+                    <span>{t('carDetails.duration')}</span>
                     <span>{formatDuration(calculateDays())}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Price per day:</span>
+                    <span>{t('carDetails.pricePerDay')}</span>
                     <span>Rs. {car.pricePerDay.toLocaleString('en-IN')}</span>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="flex justify-between">
-                    <span>Round Trip:</span>
+                    <span>{t('carDetails.roundTrip')}</span>
                     <span className="font-medium">{distance * 2} km</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Price per km:</span>
+                    <span>{t('carDetails.pricePerKm')}</span>
                     <span>Rs. {pricePerKm}</span>
                   </div>
                 </>
               )}
               <hr className="my-1" />
               <div className="flex justify-between font-semibold text-sm">
-                <span>Total Amount:</span>
+                <span>{t('carDetails.totalAmount')}</span>
                 <span>Rs. {getTotalAmount().toLocaleString('en-IN')}</span>
               </div>
             </div>
@@ -707,26 +803,105 @@ const CarDetails = () => {
             }
             className="w-full bg-primary hover:bg-primary-dull transition-all py-2 font-medium text-white rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
-            {loading ? 'Booking...' : 
-             checkingAvailability ? 'Checking...' :
-             !user ? 'Login to Book' : 
-             user.role === 'admin' ? 'Admins Cannot Book' : 
-             (availabilityStatus && !availabilityStatus.available) ? 'Not Available' :
-             'Book Now'}
+            {loading ? t('carDetails.booking') : 
+             checkingAvailability ? t('carDetails.checking') :
+             !user ? t('carDetails.loginToBook') : 
+             user.role === 'admin' ? t('carDetails.adminsCannotBook') : 
+             (availabilityStatus && !availabilityStatus.available) ? t('carDetails.notAvailable') :
+             t('carDetails.bookNow')}
           </button>
 
           {user?.role === 'admin' ? (
             <p className="text-center text-xs text-orange-600">
-              🔒 Admin accounts are for platform management only
+              🔒 {t('carDetails.adminManagement')}
             </p>
           ) : (
             <p className="text-center text-xs text-green-600">
-              💰 Pay cash on delivery - No advance payment required
+              💰 {t('carDetails.noAdvancePayment')}
             </p>
+          )}
+
+          {/* Contact Owner Button */}
+          {user && user.role !== 'admin' && car.userId && (
+            <div className="mt-3 pt-3 border-t border-borderColor">
+              <ContactOwnerButton 
+                ownerId={car.userId} 
+                ownerName={car.ownerName || 'Owner'}
+                carId={car._id}
+              />
+            </div>
           )}
         </motion.form>
         )}
       </div>
+
+      {/* Reviews Section */}
+      <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.4 }}
+      className="mt-12"
+    >
+      {/* Average Rating Display */}
+      {car.averageRating > 0 && (
+        <div className="mb-8 p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200">
+          <div className="flex items-center gap-4">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-gray-800">{car.averageRating.toFixed(1)}</div>
+              {renderStars(car.averageRating)}
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-gray-800">Overall Rating</p>
+              <p className="text-sm text-gray-600">
+                Based on {car.totalReviews || 0} {car.totalReviews === 1 ? 'review' : 'reviews'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Form for Users with Completed Bookings */}
+      {user && !isAdmin && unreviewedBookings.length > 0 && (
+        <div className="mb-8">
+          {!showReviewForm ? (
+            <button
+              onClick={() => setShowReviewForm(true)}
+              className="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-all font-medium flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+              Write a Review {unreviewedBookings.length > 1 && `(${unreviewedBookings.length} bookings)`}
+            </button>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-800">Write Your Review</h3>
+                <button
+                  onClick={() => setShowReviewForm(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <ReviewForm
+                bookingId={unreviewedBookings[0]._id}
+                carId={id}
+                onSuccess={handleReviewSuccess}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Reviews List */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Customer Reviews</h2>
+        <ReviewList key={reviewsKey} carId={id} />
+      </div>
+    </motion.div>
     </div>
   ) : (
     <Loader />

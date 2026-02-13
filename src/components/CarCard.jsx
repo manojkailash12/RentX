@@ -12,7 +12,14 @@ const CarCard = ({car}) => {
         <div className='relative h-48 overflow-hidden'>
             <img src={car.image} alt="Car Image" className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105'/>
 
-            {car.isAvailable && <p className='absolute top-4 left-4 bg-primary/90 text-white text-xs px-2.5 py-1 rounded-full'>Available Now</p>}
+            {/* Show booking status */}
+            {car.isCurrentlyBooked ? (
+                <p className='absolute top-4 left-4 bg-red-500/90 text-white text-xs px-2.5 py-1 rounded-full'>Currently Booked</p>
+            ) : car.isAvailable ? (
+                <p className='absolute top-4 left-4 bg-primary/90 text-white text-xs px-2.5 py-1 rounded-full'>Available Now</p>
+            ) : (
+                <p className='absolute top-4 left-4 bg-gray-500/90 text-white text-xs px-2.5 py-1 rounded-full'>Unavailable</p>
+            )}
 
             <div className='absolute bottom-4 right-4 bg-black/80 backdrop-blur-sm text-white px-3 py-2 rounded-lg '>
                 <span className='font-semibold'>{currency} {car.pricePerDay}</span>
@@ -27,6 +34,25 @@ const CarCard = ({car}) => {
                     <p className='text-muted-foreground text-sm'>{car.category} • {car.year}</p>
                 </div>
             </div>
+
+            {/* Average Rating Display */}
+            {car.averageRating > 0 && (
+                <div className='flex items-center gap-2 mt-2 mb-3'>
+                    <div className='flex text-yellow-400 text-sm'>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <span key={star}>
+                                {star <= Math.round(car.averageRating) ? '★' : '☆'}
+                            </span>
+                        ))}
+                    </div>
+                    <span className='text-sm font-medium text-gray-700'>
+                        {car.averageRating.toFixed(1)}
+                    </span>
+                    <span className='text-xs text-gray-500'>
+                        ({car.totalReviews || 0})
+                    </span>
+                </div>
+            )}
 
             <div className='mt-4 grid grid-cols-2 gap-y-2 text-gray-600'>
                 <div className='flex items-center text-sm text-muted-foreground'>

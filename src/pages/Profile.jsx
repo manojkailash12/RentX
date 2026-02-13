@@ -3,8 +3,12 @@ import { useAppContext } from '../context/AppContext';
 import { assets } from '../assets/assets';
 import toast from 'react-hot-toast';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 
 const Profile = () => {
+  const { t } = useTranslation();
   const { user, axios, setUser } = useAppContext();
   const [loading, setLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
@@ -106,6 +110,9 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-light py-8 flex flex-col">
       <div className="max-w-4xl mx-auto px-6 md:px-16 lg:px-24 xl:px-32 flex-1">
+        <div className="mb-6">
+          <BackButton />
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -115,9 +122,9 @@ const Profile = () => {
           {/* Header */}
           <div className="bg-gradient-to-r from-primary to-primary-dull px-8 py-6">
             <h1 className="text-2xl font-bold text-white">
-              {user.role === 'admin' ? 'Admin Profile' : 'My Profile'}
+              {user.role === 'admin' ? t('profile.adminProfile') : t('profile.title')}
             </h1>
-            <p className="text-blue-100 mt-1">Manage your account information</p>
+            <p className="text-blue-100 mt-1">{t('profile.subtitle')}</p>
           </div>
 
           <div className="p-8 flex-1">
@@ -174,7 +181,7 @@ const Profile = () => {
                         ? 'bg-red-100 text-red-800' 
                         : 'bg-blue-100 text-blue-800'
                     }`}>
-                      {user.role === 'admin' ? '👑 Admin' : '👤 User'}
+                      {user.role === 'admin' ? `👑 ${t('profile.admin')}` : `👤 ${t('profile.user')}`}
                     </span>
                   </div>
                 </div>
@@ -182,12 +189,12 @@ const Profile = () => {
                 {/* Account Info */}
                 <div className="mt-6 space-y-3">
                   <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="text-sm text-gray-500">{t('profile.email')}</p>
                     <p className="font-medium text-gray-800">{user.email}</p>
                   </div>
                   
                   <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-500">Member Since</p>
+                    <p className="text-sm text-gray-500">{t('profile.memberSince')}</p>
                     <p className="font-medium text-gray-800">
                       {new Date(user.createdAt).toLocaleDateString('en-IN', {
                         year: 'numeric',
@@ -208,12 +215,12 @@ const Profile = () => {
               >
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">{t('profile.personalInfo')}</h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                          Full Name *
+                          {t('profile.fullName')} *
                         </label>
                         <input
                           type="text"
@@ -222,14 +229,14 @@ const Profile = () => {
                           value={formData.name}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-                          placeholder="Enter your full name"
+                          placeholder={t('profile.enterFullName')}
                           required
                         />
                       </div>
 
                       <div>
                         <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                          Username *
+                          {t('profile.username')} *
                         </label>
                         <input
                           type="text"
@@ -238,14 +245,14 @@ const Profile = () => {
                           value={formData.username}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-                          placeholder="Enter your username"
+                          placeholder={t('profile.enterUsername')}
                           required
                         />
                       </div>
 
                       <div>
                         <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                          Phone Number
+                          {t('profile.phoneNumber')}
                         </label>
                         <input
                           type="tel"
@@ -254,13 +261,13 @@ const Profile = () => {
                           value={formData.phone}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-                          placeholder="Enter your phone number"
+                          placeholder={t('profile.enterPhone')}
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Email Address
+                          {t('profile.emailAddress')}
                         </label>
                         <input
                           type="email"
@@ -268,7 +275,7 @@ const Profile = () => {
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
                           disabled
                         />
-                        <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('profile.emailCannotChange')}</p>
                       </div>
                     </div>
                   </div>
@@ -283,10 +290,10 @@ const Profile = () => {
                       {loading ? (
                         <div className="flex items-center justify-center gap-2">
                           <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                          Updating...
+                          {t('profile.updating')}
                         </div>
                       ) : (
-                        'Update Profile'
+                        t('profile.updateProfile')
                       )}
                     </button>
                     
@@ -299,21 +306,24 @@ const Profile = () => {
                       })}
                       className="flex-1 sm:flex-none bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors"
                     >
-                      Reset Changes
+                      {t('profile.resetChanges')}
                     </button>
                   </div>
-                </form>
 
-                {/* Additional Info */}
-                <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-                  <h4 className="font-medium text-blue-800 mb-2">📝 Profile Tips</h4>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• You can login using your email, username, or name</li>
-                    <li>• Username must be unique across all users</li>
-                    <li>• Profile image should be less than 5MB</li>
-                    <li>• Phone number is optional but recommended for bookings</li>
-                  </ul>
-                </div>
+                  {/* Account Settings Link */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <Link
+                      to="/settings/account"
+                      className="inline-flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Account Settings
+                    </Link>
+                  </div>
+                </form>
               </motion.div>
             </div>
           </div>

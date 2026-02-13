@@ -110,19 +110,56 @@ const addCar = async (req, res) => {
       console.log('💾 Local image URL:', imageUrl);
     }
 
-    const isApproved = role === 'admin';
-    const ownerType = role === 'admin' ? 'admin' : 'user';
+    // Car approval logic based on role:
+    // 1. Employee adding admin car (platform inventory) → Auto-approved, owner = admin
+    // 2. Employee adding their own car → Needs admin approval
+    // 3. User adding their car → Needs employee approval
+    // 4. Admin adding their car → Auto-approved (shouldn't happen, employees add for admin)
     
-    console.log('💾 Creating car in database...');
+    let isApproved = false;
+    let ownerType = 'user';
+    let carOwner = _id; // Default: person adding is the owner
+    let addedBy = null;
+    
+    // Check if employee is adding a car for admin (platform inventory)
+    if (role === 'employee' && req.body.addForAdmin === 'true') {
+      // Employee adding admin car (platform inventory)
+      isApproved = true; // Auto-approved
+      ownerType = 'admin';
+      // Find an admin user to set as owner
+      const adminUser = await User.findOne({ role: 'admin' });
+      if (!adminUser) {
+        return res.status(400).json({ success: false, message: "No admin found in system" });
+      }
+      carOwner = adminUser._id;
+      addedBy = _id; // Track which employee added it
+    } else {
+      // Person adding their own car
+      ownerType = role === 'admin' ? 'admin' : (role === 'employee' ? 'employee' : 'user');
+      carOwner = _id;
+      
+      // Approval logic:
+      // - Admin cars: auto-approved (but shouldn't happen)
+      // - Employee cars: need admin approval
+      // - User cars: need employee approval
+      if (role === 'admin') {
+        isApproved = true;
+      } else {
+        isApproved = false; // Needs approval
+      }
+    }
+    
+    console.log('💾 Creating car in database...', { isApproved, ownerType, carOwner, addedBy });
     
     const newCar = await Car.create({ 
       ...car, 
-      owner: _id, 
+      owner: carOwner, 
       image: imageUrl,
       isApproved,
       ownerType,
-      approvedBy: role === 'admin' ? _id : undefined,
-      approvedAt: role === 'admin' ? new Date() : undefined,
+      addedBy,
+      approvedBy: isApproved ? carOwner : undefined,
+      approvedAt: isApproved ? new Date() : undefined,
       name: `${car.brand} ${car.model}`,
       year: parseInt(car.year),
       pricePerDay: parseFloat(car.pricePerDay),
@@ -131,9 +168,9 @@ const addCar = async (req, res) => {
 
     console.log('✅ Car created successfully:', newCar._id);
 
-    const message = role === 'admin' 
-      ? "Car added to platform inventory successfully!" 
-      : "Your car has been submitted for approval. You'll be notified once it's approved and available for rent.";
+    const message = isApproved 
+      ? "Car added successfully and is now available for rent!"
+      : "Car added successfully and is pending approval";
 
     res.json({ 
       success: true, 
@@ -144,7 +181,8 @@ const addCar = async (req, res) => {
         name: newCar.name,
         brand: newCar.brand,
         model: newCar.model,
-        isApproved: newCar.isApproved
+        isApproved: newCar.isApproved,
+        ownerType: newCar.ownerType
       }
     });
   } catch (error) {
@@ -163,8 +201,15 @@ const getOwnerCars = async (req, res) => {
     
     console.log('🔍 getOwnerCars request:', { userId: _id, role });
     
-    // Admin sees all cars, regular users see only their cars
-    const query = role === 'admin' ? {} : { owner: _id };
+    // Only Employee sees all cars, users see only their cars, admin sees nothing
+    let query;
+    if (role === 'employee') {
+      query = {}; // Employee sees all cars
+    } else if (role === 'admin') {
+      return res.json({ success: true, cars: [] }); // Admin sees no cars
+    } else {
+      query = { owner: _id }; // Users see only their cars
+    }
     
     console.log('📋 Query:', JSON.stringify(query));
     
@@ -172,7 +217,7 @@ const getOwnerCars = async (req, res) => {
       .populate('owner', 'name email role')
       .sort({ createdAt: -1 });
     
-    console.log(`📋 Fetched ${cars.length} cars for ${role === 'admin' ? 'admin' : 'user'}`);
+    console.log(`📋 Fetched ${cars.length} cars for ${role}`);
     
     if (cars.length > 0) {
       console.log('🚗 First car:', {
@@ -191,43 +236,98 @@ const getOwnerCars = async (req, res) => {
   }
 };
 
-// api to get pending cars for approval (admin only)
+// api to get pending cars for approval
+// Employees see user cars, Admins see employee cars
 const getPendingCars = async (req, res) => {
   try {
     const { role } = req.user;
     
-    if (role !== 'admin') {
-      return res.json({ success: false, message: "Unauthorized. Admin access required." });
+    if (role !== 'employee' && role !== 'admin') {
+      return res.json({ success: false, message: "Unauthorized. Employee or Admin access required." });
     }
+    
+    // Employees approve user cars, Admins approve employee cars
+    const ownerTypeFilter = role === 'employee' ? 'user' : 'employee';
     
     const pendingCars = await Car.find({ 
       isApproved: false,
-      ownerType: 'user' 
+      ownerType: ownerTypeFilter 
     })
-    .populate('owner', 'name email')
+    .populate('owner', 'name email role')
     .sort({ createdAt: -1 });
     
-    res.json({ success: true, cars: pendingCars });
+    res.json({ 
+      success: true, 
+      cars: pendingCars,
+      approverRole: role,
+      filteringFor: ownerTypeFilter
+    });
   } catch (error) {
     console.log(error.message);
     res.json({ success: false, message: error.message });
   }
 };
 
-// api to approve/reject car (admin only)
+// api to get car approval statistics
+const getCarApprovalStats = async (req, res) => {
+  try {
+    const { role } = req.user;
+    
+    if (role !== 'employee' && role !== 'admin') {
+      return res.json({ success: false, message: "Unauthorized. Employee or Admin access required." });
+    }
+    
+    // Employees approve user cars, Admins approve employee cars
+    const ownerTypeFilter = role === 'employee' ? 'user' : 'employee';
+    
+    const [pending, approved, rejected] = await Promise.all([
+      Car.countDocuments({ isApproved: false, ownerType: ownerTypeFilter }),
+      Car.countDocuments({ isApproved: true, ownerType: ownerTypeFilter }),
+      Car.countDocuments({ isApproved: false, rejectionReason: { $exists: true, $ne: '' }, ownerType: ownerTypeFilter })
+    ]);
+    
+    res.json({ 
+      success: true, 
+      stats: {
+        pending,
+        approved,
+        rejected,
+        total: pending + approved + rejected
+      }
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+// api to approve/reject car
+// Employees approve user cars, Admins approve employee cars
 const approveRejectCar = async (req, res) => {
   try {
     const { role, _id } = req.user;
     const { carId, action, rejectionReason } = req.body;
     
-    if (role !== 'admin') {
-      return res.json({ success: false, message: "Unauthorized. Admin access required." });
+    if (role !== 'employee' && role !== 'admin') {
+      return res.json({ success: false, message: "Unauthorized. Employee or Admin access required." });
     }
     
-    const car = await Car.findById(carId).populate('owner', 'name email');
+    const car = await Car.findById(carId).populate('owner', 'name email role');
     
     if (!car) {
       return res.json({ success: false, message: "Car not found" });
+    }
+    
+    // Verify approval authority:
+    // Employees can approve user cars
+    // Admins can approve employee cars
+    if (role === 'employee' && car.ownerType !== 'user') {
+      return res.json({ success: false, message: "Employees can only approve user cars" });
+    }
+    
+    if (role === 'admin' && car.ownerType !== 'employee') {
+      return res.json({ success: false, message: "Admins can only approve employee cars" });
     }
     
     if (action === 'approve') {
@@ -264,11 +364,11 @@ const getCarForEdit = async (req, res) => {
       return res.json({ success: false, message: "Car not found" });
     }
     
-    // Check if user owns the car or is admin
+    // Check if user owns the car or is employee (admin cannot edit)
     const isOwner = car.owner.toString() === _id.toString();
-    const isAdmin = role === 'admin';
+    const isEmployee = role === 'employee';
     
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isEmployee) {
       return res.json({ success: false, message: "Unauthorized to edit this car" });
     }
     
@@ -298,11 +398,11 @@ const updateCar = async (req, res) => {
       return res.json({ success: false, message: "Car not found" });
     }
     
-    // Check if user owns the car or is admin
+    // Check if user owns the car or is employee (admin cannot edit)
     const isOwner = existingCar.owner.toString() === _id.toString();
-    const isAdmin = role === 'admin';
+    const isEmployee = role === 'employee';
     
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isEmployee) {
       return res.json({ success: false, message: "Unauthorized to edit this car" });
     }
     
@@ -354,13 +454,13 @@ const updateCar = async (req, res) => {
       ...carData,
       image: imageUrl,
       name: `${carData.brand} ${carData.model}`,
-      // If user-owned car is edited, it needs re-approval (unless admin is editing)
-      isApproved: (existingCar.ownerType === 'admin' || role === 'admin') ? true : false,
+      // If user-owned car is edited, it needs re-approval (unless employee is editing)
+      isApproved: (existingCar.ownerType === 'admin' || role === 'employee') ? true : false,
       rejectionReason: undefined, // Clear any previous rejection reason
       updatedAt: new Date()
     }, { new: true });
     
-    const message = (existingCar.ownerType === 'user' && role !== 'admin') 
+    const message = (existingCar.ownerType === 'user' && role !== 'employee') 
       ? "Car updated successfully! It will need re-approval before being available for booking."
       : "Car updated successfully!";
     
@@ -383,11 +483,11 @@ const deleteCar = async (req, res) => {
       return res.json({ success: false, message: "Car not found" });
     }
     
-    // Check if user owns the car or is admin
+    // Check if user owns the car or is employee (admin cannot delete)
     const isOwner = car.owner.toString() === _id.toString();
-    const isAdmin = role === 'admin';
+    const isEmployee = role === 'employee';
     
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isEmployee) {
       return res.json({ success: false, message: "Unauthorized to delete this car" });
     }
     
@@ -428,11 +528,11 @@ const toggleCarAvailability = async (req, res) => {
       return res.json({ success: false, message: "Car not found" });
     }
 
-    // checking if car belongs to the user or if user is admin
+    // checking if car belongs to the user or if user is employee (admin cannot toggle)
     const isOwner = car.owner.toString() === _id.toString();
-    const isAdmin = role === 'admin';
+    const isEmployee = role === 'employee';
     
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isEmployee) {
       return res.json({ success: false, message: "Unauthorized" });
     }
 
@@ -479,26 +579,44 @@ const getDashboardData = async (req, res) => {
       status: "pending",
     });
     
-    const completedBookings = await Booking.find({
+    const confirmedBookings = await Booking.find({
       ...bookingsQuery,
       status: "confirmed",
     });
+    
+    const completedBookings = await Booking.find({
+      ...bookingsQuery,
+      status: "completed",
+    });
 
-    // Calculate monthly revenue with commission consideration
+    // Calculate monthly revenue
+    // For admin: total revenue from all bookings
+    // For users: only their earnings after commission
     const monthlyRevenue = bookings
-      .filter(booking => booking.status === "confirmed")
+      .filter(booking => ['confirmed', 'completed'].includes(booking.status))
       .reduce((acc, booking) => {
-        // Use ownerEarnings if available, otherwise use full price for backward compatibility
-        return acc + (booking.ownerEarnings || booking.totalAmount || booking.price || 0);
+        if (role === 'admin') {
+          // Admin gets platform earnings from user cars + full amount from admin cars
+          return acc + (booking.totalAmount || booking.price || 0);
+        } else {
+          // Users get their earnings after commission
+          return acc + (booking.ownerEarnings || booking.totalAmount || booking.price || 0);
+        }
       }, 0);
+    
+    // Calculate platform commission (admin only)
+    const platformCommission = role === 'admin' ? bookings
+      .filter(booking => ['confirmed', 'completed'].includes(booking.status))
+      .reduce((acc, booking) => acc + (booking.platformEarnings || 0), 0) : 0;
 
     const dashboardData = {
       totalCars: cars.length,
       totalBookings: bookings.length,
       pendingBookings: pendingBookings.length,
-      completedBookings: completedBookings.length,
+      completedBookings: confirmedBookings.length, // Show confirmed bookings count
       recentBookings: bookings.slice(0, 3),
       monthlyRevenue,
+      platformCommission: role === 'admin' ? platformCommission : undefined,
       approvedCars: cars.filter(car => car.isApproved).length,
       pendingApprovalCars: cars.filter(car => !car.isApproved).length,
     };
@@ -551,6 +669,7 @@ module.exports = {
   addCar,
   getOwnerCars,
   getPendingCars,
+  getCarApprovalStats,
   approveRejectCar,
   getCarForEdit,
   updateCar,

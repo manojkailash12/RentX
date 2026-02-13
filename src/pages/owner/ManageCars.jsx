@@ -4,10 +4,11 @@ import Title from '../../components/owner/Title'
 import { useAppContext } from '../../context/AppContext'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import BackButton from '../../components/BackButton'
 
 const ManageCars = () => {
 
-  const { isOwner, axios, currency, isAdmin, downloadFile, getImageUrl } = useAppContext()
+  const { isOwner, axios, currency, isAdmin, isEmployee, downloadFile, getImageUrl } = useAppContext()
   const navigate = useNavigate()
 
   const [cars, setCars] = useState([])
@@ -45,10 +46,41 @@ const ManageCars = () => {
   }
 
   const deleteCar = async (carId) => {
-    try {
-      const confirm = window.confirm('Are you sure you want to delete this car? This action cannot be undone.')
+    // Use toast with custom confirmation
+    const confirmDelete = () => {
+      return new Promise((resolve) => {
+        toast((t) => (
+          <div className="flex flex-col gap-3">
+            <p className="font-semibold">Delete Car</p>
+            <p className="text-sm">Are you sure you want to delete this car? This action cannot be undone.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  resolve(false);
+                }}
+                className="flex-1 px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  resolve(true);
+                }}
+                className="flex-1 px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ), { duration: Infinity });
+      });
+    };
 
-      if(!confirm) return null
+    try {
+      const confirmed = await confirmDelete();
+      if (!confirmed) return;
 
       const { data } = await axios.post('/owner/delete-car', {carId})
       if (data.success) {
@@ -103,9 +135,24 @@ const ManageCars = () => {
     setExportLoading(true);
     try {
       await downloadFile('/admin/cars/export/excel', `cars-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success('Cars Excel exported successfully!');
     } catch (error) {
       console.error('Excel export error:', error);
       toast.error('Failed to export Excel');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // Export PDF function
+  const handleExportPDF = async () => {
+    setExportLoading(true);
+    try {
+      await downloadFile('/admin/cars/export/pdf', `cars-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('Cars PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast.error('Failed to export PDF');
     } finally {
       setExportLoading(false);
     }
@@ -130,32 +177,69 @@ const ManageCars = () => {
 
   return (
     <div className='h-full flex flex-col p-4 md:p-6 bg-gray-50 overflow-auto'>
+      <div className="mb-4">
+        <BackButton />
+      </div>
       <div className="flex justify-between items-start mb-4">
         <Title title={getTitle()} subTitle={getSubtitle()} />
         <div className="flex items-center gap-2">
-          {/* Export button for admin */}
+          {/* Export buttons for admin */}
           {isAdmin && (
+            <>
+              <button 
+                type="button"
+                onClick={handleExportPDF}
+                disabled={exportLoading}
+                className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+              >
+                {exportLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  '📄'
+                )}
+                PDF
+              </button>
+              <button 
+                type="button"
+                onClick={handleExportExcel}
+                disabled={exportLoading}
+                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+              >
+                {exportLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  '📊'
+                )}
+                Excel
+              </button>
+            </>
+          )}
+          {isEmployee ? (
+            <div className="flex gap-2">
+              <button 
+                onClick={() => navigate('/owner/add-admin-car')}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm"
+              >
+                <img src={assets.addIconColored} alt="" className="w-4 h-4 filter brightness-0 invert" />
+                Add Admin Car
+              </button>
+              <button 
+                onClick={() => navigate('/owner/add-own-car')}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors flex items-center gap-2 text-sm"
+              >
+                <img src={assets.addIconColored} alt="" className="w-4 h-4 filter brightness-0 invert" />
+                Add My Car
+              </button>
+            </div>
+          ) : (
             <button 
-              type="button"
-              onClick={handleExportExcel}
-              disabled={exportLoading}
-              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+              onClick={() => navigate('/owner/add-car')}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors flex items-center gap-2 text-sm"
             >
-              {exportLoading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                '📊'
-              )}
-              Excel
+              <img src={assets.addIconColored} alt="" className="w-4 h-4 filter brightness-0 invert" />
+              Add New Car
             </button>
           )}
-          <button 
-            onClick={() => navigate('/owner/add-car')}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors flex items-center gap-2 text-sm"
-          >
-            <img src={assets.addIconColored} alt="" className="w-4 h-4 filter brightness-0 invert" />
-            Add New Car
-          </button>
         </div>
       </div>
 
@@ -179,12 +263,29 @@ const ManageCars = () => {
             <p className='text-gray-500 text-center mb-4'>
               {isAdmin ? 'No cars have been added to the platform yet.' : 'You haven\'t listed any cars yet.'}
             </p>
-            <button 
-              onClick={() => navigate('/owner/add-car')}
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors"
-            >
-              Add Your First Car
-            </button>
+            {isEmployee ? (
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => navigate('/owner/add-admin-car')}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Add Admin Car
+                </button>
+                <button 
+                  onClick={() => navigate('/owner/add-own-car')}
+                  className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors"
+                >
+                  Add My Car
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => navigate('/owner/add-car')}
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors"
+              >
+                Add Your First Car
+              </button>
+            )}
           </div>
         ) : (
           <div className='bg-white rounded-lg border border-gray-200 overflow-hidden'>
@@ -225,7 +326,7 @@ const ManageCars = () => {
                         <div>
                           <p className='font-medium'>₹{car.pricePerDay?.toLocaleString('en-IN') || 0}/day</p>
                           {car.ownerType === 'user' && (
-                            <p className='text-xs text-blue-600'>Commission: {car.commissionRate || 40}%</p>
+                            <p className='text-xs text-blue-600'>Commission: {car.commissionRate || 60}%</p>
                           )}
                         </div>
                       </td>

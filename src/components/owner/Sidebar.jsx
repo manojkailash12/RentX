@@ -2,11 +2,12 @@ import React, { useState } from 'react'
 import { assets, ownerMenuLinks } from '../../assets/assets'
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
 const Sidebar = () => {
-
-    const {user, axios, fetchUser, isAdmin, logout} = useAppContext();
+    const { t } = useTranslation();
+    const {user, axios, fetchUser, isAdmin, isEmployee, logout} = useAppContext();
     const location = useLocation();
     const [image, setImage] = useState('')
 
@@ -39,17 +40,213 @@ const Sidebar = () => {
         return names[0][0].toUpperCase();
     };
 
-    // Get menu links based on user role
+    // Get menu links based on user role with translations
     const getMenuLinks = () => {
-        let menuLinks = [...ownerMenuLinks];
+        let menuLinks = [
+            { name: t('sidebar.dashboard'), path: "/owner", icon: assets.dashboardIcon, coloredIcon: assets.dashboardIconColored }
+        ];
         
-        // Add admin-specific menu items
-        if (isAdmin) {
-            menuLinks.splice(2, 0, { // Insert after "Add car"
-                name: "Car Approvals", 
+        // Add employee-specific car management options
+        if (isEmployee) {
+            menuLinks.push(
+                { 
+                    name: 'Add Admin Car', 
+                    path: "/owner/add-admin-car", 
+                    icon: assets.addIcon, 
+                    coloredIcon: assets.addIconColored 
+                },
+                { 
+                    name: 'Add My Car', 
+                    path: "/owner/add-own-car", 
+                    icon: assets.addIcon, 
+                    coloredIcon: assets.addIconColored 
+                }
+            );
+        } else if (!isAdmin) {
+            // Regular users (non-employee, non-admin) see single Add Car option
+            menuLinks.push({ 
+                name: t('sidebar.addCar'), 
+                path: "/owner/add-car", 
+                icon: assets.addIcon, 
+                coloredIcon: assets.addIconColored 
+            });
+        }
+        
+        // Add common menu items
+        // Hide "My Bookings" for admin and employee roles
+        if (!isAdmin && !isEmployee) {
+            menuLinks.push({ 
+                name: t('sidebar.myBookings'), 
+                path: "/my-bookings", 
+                icon: assets.calendar_icon_colored, 
+                coloredIcon: assets.calendar_icon_colored 
+            });
+        }
+        
+        menuLinks.push({ 
+            name: t('sidebar.manageCars'), 
+            path: "/owner/manage-cars", 
+            icon: assets.carIcon, 
+            coloredIcon: assets.carIconColored 
+        });
+        
+        // Hide "Manage Bookings" for admin role - employees handle this
+        if (!isAdmin) {
+            menuLinks.push({ 
+                name: t('sidebar.manageBookings'), 
+                path: "/owner/manage-bookings", 
+                icon: assets.listIcon, 
+                coloredIcon: assets.listIconColored 
+            });
+        }
+        
+        // Add advanced features for regular users (non-admin, non-employee)
+        if (!isAdmin && !isEmployee) {
+            menuLinks.push({
+                name: 'Predictive Maintenance',
+                path: "/owner/predictive-maintenance",
+                icon: assets.carIcon,
+                coloredIcon: assets.carIconColored
+            });
+            menuLinks.push({
+                name: 'EV Charging Stations',
+                path: "/owner/charging-stations",
+                icon: assets.carIcon,
+                coloredIcon: assets.carIconColored
+            });
+            menuLinks.push({
+                name: 'Smart Contracts',
+                path: "/owner/smart-contracts",
+                icon: assets.carIcon,
+                coloredIcon: assets.carIconColored
+            });
+        }
+        
+        // Add employee-specific menu items
+        if (isEmployee) {
+            menuLinks.push({
+                name: t('sidebar.carApprovals'), 
                 path: "/owner/car-approvals", 
                 icon: assets.cautionIconColored, 
                 coloredIcon: assets.cautionIconColored 
+            });
+            menuLinks.push({
+                name: 'Attendance',
+                path: "/employee/attendance",
+                icon: assets.calendar_icon_colored,
+                coloredIcon: assets.calendar_icon_colored
+            });
+            menuLinks.push({
+                name: 'Biometric Enrollment',
+                path: "/employee/biometric-enrollment",
+                icon: assets.users_icon,
+                coloredIcon: assets.users_icon
+            });
+            menuLinks.push({
+                name: 'Leave Management',
+                path: "/employee/leave-management",
+                icon: assets.listIconColored,
+                coloredIcon: assets.listIconColored
+            });
+            menuLinks.push({
+                name: 'Payroll',
+                path: "/employee/payroll",
+                icon: assets.listIconColored,
+                coloredIcon: assets.listIconColored
+            });
+            menuLinks.push({
+                name: 'Account Deletion',
+                path: "/employee/account-deletion",
+                icon: assets.users_icon,
+                coloredIcon: assets.users_icon
+            });
+            menuLinks.push({
+                name: 'Reviews', 
+                path: "/owner/reviews", 
+                icon: assets.listIconColored, 
+                coloredIcon: assets.listIconColored 
+            });
+            menuLinks.push({
+                name: 'Support Tickets',
+                path: "/owner/support-tickets",
+                icon: assets.listIconColored,
+                coloredIcon: assets.listIconColored
+            });
+            menuLinks.push({
+                name: 'Chat Support',
+                path: "/owner/admin-chat",
+                icon: assets.listIconColored,
+                coloredIcon: assets.listIconColored
+            });
+            menuLinks.push({
+                name: 'Users',
+                path: "/owner/users",
+                icon: assets.users_icon,
+                coloredIcon: assets.users_icon
+            });
+            menuLinks.push({
+                name: 'Deleted Accounts',
+                path: "/owner/deleted-accounts",
+                icon: assets.users_icon,
+                coloredIcon: assets.users_icon
+            });
+        }
+        
+        // Add admin-specific menu items
+        if (isAdmin) {
+            menuLinks.push({
+                name: 'Employee Car Approvals',
+                path: "/owner/admin-car-approvals",
+                icon: assets.cautionIconColored,
+                coloredIcon: assets.cautionIconColored
+            });
+            menuLinks.push({
+                name: 'Employees',
+                path: "/owner/employees",
+                icon: assets.users_icon,
+                coloredIcon: assets.users_icon
+            });
+            menuLinks.push({
+                name: 'Employee Deletion Requests',
+                path: "/owner/employee-deletion-requests",
+                icon: assets.users_icon,
+                coloredIcon: assets.users_icon
+            });
+            menuLinks.push({
+                name: 'Biometric Devices',
+                path: "/owner/biometric-devices",
+                icon: assets.users_icon,
+                coloredIcon: assets.users_icon
+            });
+            menuLinks.push({
+                name: 'Shift Scheduling',
+                path: "/owner/shift-scheduling",
+                icon: assets.calendar_icon_colored,
+                coloredIcon: assets.calendar_icon_colored
+            });
+            menuLinks.push({
+                name: 'Performance Reviews',
+                path: "/owner/performance-reviews",
+                icon: assets.listIconColored,
+                coloredIcon: assets.listIconColored
+            });
+            menuLinks.push({
+                name: 'Training Management',
+                path: "/owner/training-management",
+                icon: assets.listIconColored,
+                coloredIcon: assets.listIconColored
+            });
+            menuLinks.push({
+                name: 'Dynamic Pricing',
+                path: "/owner/dynamic-pricing",
+                icon: assets.listIconColored,
+                coloredIcon: assets.listIconColored
+            });
+            menuLinks.push({
+                name: 'Leave Approval',
+                path: "/owner/leave-approval",
+                icon: assets.listIconColored,
+                coloredIcon: assets.listIconColored
             });
         }
         
@@ -79,7 +276,7 @@ const Sidebar = () => {
         </div>
         {image && (
             <button onClick={updateImage} className='mb-4 flex p-2 gap-1 bg-primary/10 text-primary cursor-pointer rounded text-xs'>
-                Save <img src={assets.check_icon} width={13} alt=""/>
+                {t('sidebar.save')} <img src={assets.check_icon} width={13} alt=""/>
             </button>
         )}
         <div className='text-center max-md:hidden mb-6'>
@@ -87,7 +284,7 @@ const Sidebar = () => {
             <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${
                 isAdmin ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
             }`}>
-                {isAdmin ? 'Admin' : 'User'}
+                {isAdmin ? t('nav.admin') : t('nav.user')}
             </span>
         </div>
 
@@ -103,7 +300,7 @@ const Sidebar = () => {
             {/* Back to Home Link */}
             <Link to='/' className='relative flex items-center gap-3 w-full py-3 px-4 mt-4 hover:bg-gray-50 transition-colors text-gray-600 border-t border-gray-200'>
                 <img src={assets.arrow_icon} alt="back icon" className='rotate-180 w-5 h-5' />
-                <span className='max-md:hidden'>Back to Home</span>
+                <span className='max-md:hidden'>{t('sidebar.backToHome')}</span>
             </Link>
         </div>
     </div>

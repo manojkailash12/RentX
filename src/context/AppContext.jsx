@@ -59,6 +59,7 @@ export const AppProvider = ({ children }) => {
     const [user, setUser] = useState(null)
     const [isOwner, setIsOwner] = useState(false)
     const [isAdmin, setIsAdmin] = useState(false)
+    const [isEmployee, setIsEmployee] = useState(false)
     const [showLogin, setShowLogin] = useState(false)
     const [loginMode, setLoginMode] = useState('login') // 'login' or 'register'
     const [pickupDate, setPickupDate] = useState('')
@@ -76,6 +77,7 @@ export const AppProvider = ({ children }) => {
                 // Any logged-in user can access enterprise features (owner panel)
                 setIsOwner(true) // Allow all users to access enterprise features
                 setIsAdmin(data.user.role === 'admin')
+                setIsEmployee(data.user.role === 'employee')
                 // Store user data in localStorage for persistence
                 localStorage.setItem('userData', JSON.stringify(data.user));
             } else {
@@ -87,6 +89,7 @@ export const AppProvider = ({ children }) => {
                     setUser(null);
                     setIsOwner(false);
                     setIsAdmin(false);
+                    setIsEmployee(false);
                     delete axios.defaults.headers.common['Authorization'];
                 }
             }
@@ -109,6 +112,7 @@ export const AppProvider = ({ children }) => {
                         setUser(userData);
                         setIsOwner(true); // Allow all users to access enterprise features
                         setIsAdmin(userData.role === 'admin');
+                        setIsEmployee(userData.role === 'employee');
                     } catch (e) {
                         // Silent error handling
                     }
@@ -156,6 +160,7 @@ export const AppProvider = ({ children }) => {
             setUser(null)
             setIsOwner(false)
             setIsAdmin(false)
+            setIsEmployee(false)
             delete axios.defaults.headers.common['Authorization']
             toast.success("You have been logged out")
             navigate('/');
@@ -274,7 +279,9 @@ export const AppProvider = ({ children }) => {
         navigate, 
         currency, 
         axios, 
+        backendUrl: API_BASE_URL, // Add backendUrl for components that need it
         user, 
+        userData: user, // Add userData alias for compatibility
         setUser, 
         token, 
         setToken, 
@@ -282,6 +289,8 @@ export const AppProvider = ({ children }) => {
         setIsOwner, 
         isAdmin, 
         setIsAdmin,
+        isEmployee,
+        setIsEmployee,
         fetchUser, 
         showLogin, 
         setShowLogin,

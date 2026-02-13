@@ -18,9 +18,23 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
   // Format currency
   const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString('en-IN')}`;
   
-  // Calculate duration
+  // Calculate duration - show precise hours and minutes
   const diffTime = Math.abs(dropOffDate - pickupDate);
+  const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+  const diffMinutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+  
+  // Format duration display - show as HH:MM for hours, or days if >= 24 hours
+  const formatDuration = () => {
+    if (diffHours < 24) {
+      // Show as hours:minutes (e.g., "3:04" for 3 hours 4 minutes)
+      return `${diffHours}:${diffMinutes.toString().padStart(2, '0')}`;
+    } else if (diffDays === 1) {
+      return `1 day`;
+    } else {
+      return `${diffDays} days`;
+    }
+  };
   
   // Status colors
   const getStatusColor = (status) => {
@@ -40,8 +54,8 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
   
   // PDF document definition - OPTIMIZED FOR ONE PAGE
   const docDefinition = {
-    pageSize: 'A4',
-    pageMargins: [20, 12, 20, 12],
+    pageSize: { width: 595.28, height: 'auto' }, // Dynamic height to eliminate white space
+    pageMargins: [20, 10, 20, 10], // Minimal margins to reduce white space
     content: [
       // Header - Compact
       {
@@ -66,7 +80,7 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
           ]]
         },
         layout: 'noBorders',
-        margin: [0, 0, 0, 5]
+        margin: [0, 0, 0, 2]
       },
       
       // Booking Information Card - Compact
@@ -151,7 +165,7 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
             }
           }
         ],
-        margin: [0, 0, 0, 5]
+        margin: [0, 0, 0, 2]
       },
       
       // Customer Details Card - Compact
@@ -206,7 +220,7 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
             }
           }
         ],
-        margin: [0, 0, 0, 5]
+        margin: [0, 0, 0, 2]
       },
       
       // Vehicle Details Card - Compact
@@ -261,7 +275,7 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
             }
           }
         ],
-        margin: [0, 0, 0, 5]
+        margin: [0, 0, 0, 2]
       },
       
       // Trip Details Card - Compact
@@ -320,7 +334,7 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
                 ],
                 [
                   { text: 'Duration', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, bookingDetails.distance ? true : false], borderColor: ['', '', '', '#f9fafb'] },
-                  { text: `${diffDays} day(s)`, fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, bookingDetails.distance ? true : false], borderColor: ['', '', '', '#f9fafb'] }
+                  { text: formatDuration(), fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, bookingDetails.distance ? true : false], borderColor: ['', '', '', '#f9fafb'] }
                 ],
                 ...(bookingDetails.distance ? [[
                   { text: 'Distance', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, false] },
@@ -336,7 +350,7 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
             }
           }
         ],
-        margin: [0, 0, 0, 5]
+        margin: [0, 0, 0, 2]
       },
       
       // Payment Details Card - Compact
@@ -371,8 +385,16 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
               body: [
                 ...(isPerkm ? [
                   [
+                    { text: 'Distance', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
+                    { text: `${bookingDetails.distance || 0} km`, fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
+                  ],
+                  [
+                    { text: 'Rate per km', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
+                    { text: formatCurrency(bookingDetails.pricePerKm || 15), fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
+                  ],
+                  [
                     { text: 'Base Price', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
-                    { text: formatCurrency(bookingDetails.basePrice || (bookingDetails.totalAmount - (bookingDetails.interstateAllowance || 0))), fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
+                    { text: formatCurrency(bookingDetails.basePrice || (bookingDetails.totalAmount - (bookingDetails.interstateAllowance || 0) - (bookingDetails.insuranceCost || 0))), fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
                   ],
                   [
                     { text: 'Interstate Allowance', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
@@ -380,13 +402,26 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
                   ]
                 ] : [
                   [
-                    { text: 'Base Price', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
+                    { text: 'Duration', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
+                    { text: formatDuration(), fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
+                  ],
+                  [
+                    { text: 'Rate per day', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
                     { text: formatCurrency(bookingDetails.pricePerDay), fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
+                  ],
+                  [
+                    { text: 'Base Price', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
+                    { text: formatCurrency(bookingDetails.basePrice || (bookingDetails.pricePerDay * diffDays)), fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
                   ]
                 ]),
+                // Insurance details if present
+                ...(bookingDetails.insurancePlan && bookingDetails.insuranceCost ? [[
+                  { text: `Insurance (${bookingDetails.insurancePlan})`, fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
+                  { text: formatCurrency(bookingDetails.insuranceCost), fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
+                ]] : []),
                 [
                   { text: 'Payment Method', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
-                  { text: 'Online Payment', fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
+                  { text: bookingDetails.paymentMethod === 'cash' ? 'Cash' : 'Online Payment', fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
                 ],
                 [
                   { text: 'Payment Status', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, false] },
@@ -439,7 +474,7 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
             margin: [0, 4, 0, 0]
           }
         ],
-        margin: [0, 0, 0, 5]
+        margin: [0, 0, 0, 2]
       },
       
       // Footer - Compact
@@ -449,8 +484,15 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
           body: [[
             {
               stack: [
-                { text: 'Important: Please carry valid driving license and government ID proof at pickup.', fontSize: 8, bold: true, color: '#6b7280', alignment: 'center', margin: [0, 0, 0, 2] },
-                { text: 'For support: rentxcars.spprt@gmail.com | Thank you for choosing RentX!', fontSize: 7, bold: true, color: '#9ca3af', alignment: 'center' }
+                { text: 'Important: Please carry valid driving license and government ID proof at pickup.', fontSize: 8, bold: true, color: '#111827', alignment: 'center', margin: [0, 0, 0, 2] },
+                { 
+                  text: [
+                    { text: 'For support: ', fontSize: 8, bold: true, color: '#111827' },
+                    { text: 'rentxcars.spprt@gmail.com', fontSize: 8, bold: true, color: '#2563eb' },
+                    { text: ' | Thank you for choosing RentX!', fontSize: 8, bold: true, color: '#111827' }
+                  ], 
+                  alignment: 'center' 
+                }
               ],
               fillColor: '#f9fafb',
               border: [false, true, false, false],
@@ -488,3 +530,4 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
 };
 
 module.exports = { generateBookingInvoicePDF };
+

@@ -1,8 +1,11 @@
 const User = require("../models/user.js");
 const Car = require("../models/car.js");
 const Booking = require("../models/booking.js");
-const { generatePdfFromHtml } = require('../utils/htmlToPdfGenerator.js');
+const Employee = require("../models/employee.js");
+const EmployeeAccountDeletionRequest = require('../models/employeeAccountDeletionRequest');
+const { generateEarningsReportPDF, generateCarsReportPDF, generateBookingsReportPDF } = require('../utils/adminPdfGenerator.js');
 const { sendCarReplacementEmail } = require('../utils/emailService.js');
+const { deleteUserAccount } = require('../utils/accountDeletion');
 
 // Admin middleware to check if user is admin
 const isAdmin = (req, res, next) => {
@@ -15,11 +18,13 @@ const isAdmin = (req, res, next) => {
 // Get dashboard analytics
 const getDashboardAnalytics = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments({ role: 'user', isVerified: true });
+    // Count only active users (exclude deleted and pending deletion)
+    const totalUsers = await User.countDocuments({ role: 'user', accountStatus: 'active' });
+    const totalEmployees = await Employee.countDocuments();
     const totalCars = await Car.countDocuments();
     const totalBookings = await Booking.countDocuments();
     const availableCars = await Car.countDocuments({ isAvailable: true, isApproved: true });
-    const pendingApprovalCars = await Car.countDocuments({ isApproved: false, ownerType: 'user' });
+    const pendingApprovalCars = await Car.countDocuments({ isApproved: false, ownerType: 'employee' });
     
     // Monthly earnings
     const currentMonth = new Date();
@@ -36,12 +41,16 @@ const getDashboardAnalytics = async (req, res) => {
     const platformEarnings = monthlyBookings.reduce((total, booking) => total + (booking.platformEarnings || 0), 0);
     const ownerEarnings = monthlyBookings.reduce((total, booking) => total + (booking.ownerEarnings || booking.totalAmount || booking.price || 0), 0);
     
-    // Payment method wise earnings
-    const cashEarnings = monthlyBookings
+    // Payment method wise earnings - ALL TIME (not just monthly)
+    const allBookings = await Booking.find({
+      status: { $in: ['confirmed', 'completed'] }
+    });
+    
+    const cashEarnings = allBookings
       .filter(booking => booking.paymentMethod === 'cash')
       .reduce((total, booking) => total + (booking.totalAmount || booking.price || 0), 0);
     
-    const onlineEarnings = monthlyBookings
+    const onlineEarnings = allBookings
       .filter(booking => booking.paymentMethod === 'online')
       .reduce((total, booking) => total + (booking.totalAmount || booking.price || 0), 0);
     
@@ -56,6 +65,7 @@ const getDashboardAnalytics = async (req, res) => {
       success: true,
       analytics: {
         totalUsers,
+        totalEmployees,
         totalCars,
         totalBookings,
         availableCars,
@@ -118,12 +128,13 @@ const getMonthlyEarnings = async (req, res) => {
 // Export earnings to PDF
 const exportEarningsPDF = async (req, res) => {
   try {
+    console.log('📄 Starting PDF export for earnings...');
     const { year = new Date().getFullYear() } = req.query;
     
     // Get monthly data
     let totalYearlyEarnings = 0;
     let totalYearlyBookings = 0;
-    let monthlyRows = '';
+    const monthlyData = [];
     
     for (let month = 0; month < 12; month++) {
       const startOfMonth = new Date(year, month, 1);
@@ -147,81 +158,85 @@ const exportEarningsPDF = async (req, res) => {
       
       const monthName = new Date(year, month).toLocaleString('default', { month: 'long' });
       
-      monthlyRows += `
-        <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${monthName}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${totalEarnings.toLocaleString('en-IN')}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${cashEarnings.toLocaleString('en-IN')}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${onlineEarnings.toLocaleString('en-IN')}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${bookings.length}</td>
-        </tr>
-      `;
+      monthlyData.push({
+        monthName,
+        totalEarnings,
+        cashEarnings,
+        onlineEarnings,
+        bookings: bookings.length
+      });
     }
     
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Earnings Report ${year}</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; }
-          h1 { color: #059669; text-align: center; margin-bottom: 10px; }
-          h2 { color: #6b7280; text-align: center; margin-bottom: 30px; font-weight: normal; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background: #059669; color: white; padding: 12px; text-align: left; }
-          .summary { background: #f0fdf4; padding: 20px; border-radius: 8px; margin-top: 30px; text-align: center; }
-          .summary h3 { color: #059669; margin-bottom: 10px; }
-          .summary p { font-size: 18px; color: #374151; margin: 5px 0; }
-        </style>
-      </head>
-      <body>
-        <h1>🚗 RentX - Earnings Report</h1>
-        <h2>Year: ${year}</h2>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>Month</th>
-              <th style="text-align: right;">Total Earnings</th>
-              <th style="text-align: right;">Cash Earnings</th>
-              <th style="text-align: right;">Online Earnings</th>
-              <th style="text-align: center;">Bookings</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${monthlyRows}
-          </tbody>
-        </table>
-        
-        <div class="summary">
-          <h3>📊 Yearly Summary</h3>
-          <p><strong>Total Earnings:</strong> ₹${totalYearlyEarnings.toLocaleString('en-IN')}</p>
-          <p><strong>Total Bookings:</strong> ${totalYearlyBookings}</p>
-        </div>
-      </body>
-      </html>
-    `;
+    console.log('📝 Generating PDF with pdfmake...');
+    const pdfBuffer = await generateEarningsReportPDF(year, monthlyData, totalYearlyEarnings, totalYearlyBookings);
+    console.log(`✅ PDF generated successfully (${pdfBuffer.length} bytes)`);
     
-    const pdfBuffer = await generatePdfFromHtml(htmlContent);
+    // Set proper headers for PDF download
+    res.writeHead(200, {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="earnings-report-${year}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=earnings-report-${year}.pdf`);
-    res.setHeader('Content-Length', pdfBuffer.length);
-    res.setHeader('Cache-Control', 'no-cache');
-    res.end(pdfBuffer, 'binary');
+    res.end(pdfBuffer);
   } catch (error) {
-    console.error('PDF export error:', error);
+    console.error('❌ PDF export error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Export earnings to Excel (CSV format)
+// Export earnings to Excel (proper XLSX format)
 const exportEarningsExcel = async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
+    const ExcelJS = require('exceljs');
     
-    let csvContent = 'Month,Total Earnings,Cash Earnings,Online Earnings,Total Bookings\n';
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'RentX Admin';
+    workbook.created = new Date();
+    
+    const worksheet = workbook.addWorksheet('Earnings Report');
+    
+    // Add title
+    worksheet.mergeCells('A1:E1');
+    worksheet.getCell('A1').value = 'RentX - Car Rental';
+    worksheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FFF97316' } };
+    worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(1).height = 35;
+    
+    // Add subtitle
+    worksheet.mergeCells('A2:E2');
+    worksheet.getCell('A2').value = `Earnings Report - ${year}`;
+    worksheet.getCell('A2').font = { size: 14, bold: false, color: { argb: 'FF6B7280' } };
+    worksheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(2).height = 25;
+    
+    // Add headers
+    worksheet.addRow([]);
+    const headerRow = worksheet.addRow(['Month', 'Total Earnings', 'Cash Earnings', 'Online Earnings', 'Total Bookings']);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF97316' }
+    };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerRow.height = 25;
+    
+    // Set column widths
+    worksheet.columns = [
+      { key: 'month', width: 15 },
+      { key: 'total', width: 18 },
+      { key: 'cash', width: 18 },
+      { key: 'online', width: 18 },
+      { key: 'bookings', width: 15 }
+    ];
+    
+    let totalYearlyEarnings = 0;
+    let totalYearlyBookings = 0;
     
     // Get monthly data
     for (let month = 0; month < 12; month++) {
@@ -241,16 +256,51 @@ const exportEarningsExcel = async (req, res) => {
         .filter(booking => booking.paymentMethod === 'online')
         .reduce((total, booking) => total + (booking.totalAmount || 0), 0);
       
+      totalYearlyEarnings += totalEarnings;
+      totalYearlyBookings += bookings.length;
+      
       const monthName = new Date(year, month).toLocaleString('default', { month: 'long' });
       
-      csvContent += `${monthName},₹${totalEarnings},₹${cashEarnings},₹${onlineEarnings},${bookings.length}\n`;
+      const dataRow = worksheet.addRow([
+        monthName,
+        `₹${totalEarnings.toLocaleString('en-IN')}`,
+        `₹${cashEarnings.toLocaleString('en-IN')}`,
+        `₹${onlineEarnings.toLocaleString('en-IN')}`,
+        bookings.length
+      ]);
+      
+      dataRow.alignment = { horizontal: 'center', vertical: 'middle' };
+      dataRow.border = {
+        bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } }
+      };
     }
     
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=earnings-report-${year}.csv`);
-    res.send(csvContent);
+    // Add summary row
+    worksheet.addRow([]);
+    const summaryRow = worksheet.addRow([
+      'TOTAL',
+      `₹${totalYearlyEarnings.toLocaleString('en-IN')}`,
+      '',
+      '',
+      totalYearlyBookings
+    ]);
+    summaryRow.font = { bold: true, size: 12 };
+    summaryRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF0FDF4' }
+    };
+    summaryRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // Generate buffer
+    const buffer = await workbook.xlsx.writeBuffer();
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=earnings-report-${year}.xlsx`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
   } catch (error) {
-    console.error('CSV export error:', error);
+    console.error('Excel export error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -258,8 +308,23 @@ const exportEarningsExcel = async (req, res) => {
 // Get all users (admin only)
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({ role: 'user' }).select('-password -otp -otpExpiry');
+    // Only return active users (exclude deleted and pending deletion)
+    const users = await User.find({ role: 'user', accountStatus: 'active' }).select('-password -otp -otpExpiry');
     res.json({ success: true, users });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// Get admin users for chat (accessible by all authenticated users)
+const getAdminUsers = async (req, res) => {
+  try {
+    const admins = await User.find({ role: 'admin', isVerified: true })
+      .select('_id name email image')
+      .limit(10);
+    
+    res.json({ success: true, admins });
   } catch (error) {
     console.log(error.message);
     res.json({ success: false, message: error.message });
@@ -284,107 +349,137 @@ const getAllBookings = async (req, res) => {
 // Export cars to PDF
 const exportCarsPDF = async (req, res) => {
   try {
+    console.log('📄 Starting PDF export for cars...');
     const cars = await Car.find().populate('owner', 'name email');
+    console.log(`📊 Found ${cars.length} cars to export`);
     
-    let carsRows = '';
-    cars.forEach((car, index) => {
-      carsRows += `
-        <tr style="border-bottom: 1px solid #e5e7eb;">
-          <td style="padding: 12px;">${index + 1}</td>
-          <td style="padding: 12px;">${car.brand} ${car.model}</td>
-          <td style="padding: 12px;">${car.year}</td>
-          <td style="padding: 12px;">${car.category}</td>
-          <td style="padding: 12px; text-align: right;">₹${car.pricePerDay}/day</td>
-          <td style="padding: 12px; text-align: center;">${car.seating_capacity}</td>
-          <td style="padding: 12px;">${car.location}</td>
-          <td style="padding: 12px; text-align: center;">
-            <span style="background: ${car.isApproved ? '#dcfce7' : '#fef3c7'}; color: ${car.isApproved ? '#166534' : '#92400e'}; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
-              ${car.isApproved ? 'Approved' : 'Pending'}
-            </span>
-          </td>
-          <td style="padding: 12px;">${car.owner?.name || 'N/A'}</td>
-        </tr>
-      `;
+    console.log('📝 Generating PDF with pdfmake...');
+    const pdfBuffer = await generateCarsReportPDF(cars);
+    console.log(`✅ PDF generated successfully (${pdfBuffer.length} bytes)`);
+    
+    // Set proper headers for PDF download
+    res.writeHead(200, {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="cars-report-${new Date().toISOString().split('T')[0]}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
     });
     
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Cars Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; font-size: 12px; }
-          h1 { color: #059669; text-align: center; margin-bottom: 10px; }
-          h2 { color: #6b7280; text-align: center; margin-bottom: 30px; font-weight: normal; font-size: 14px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background: #059669; color: white; padding: 10px; text-align: left; font-size: 11px; }
-          .summary { background: #f0fdf4; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-          .summary p { margin: 5px 0; color: #374151; }
-        </style>
-      </head>
-      <body>
-        <h1>🚗 RentX - Cars Report</h1>
-        <h2>Generated: ${new Date().toLocaleString()}</h2>
-        
-        <div class="summary">
-          <p><strong>Total Cars:</strong> ${cars.length}</p>
-          <p><strong>Available:</strong> ${cars.filter(c => c.isAvailable).length}</p>
-          <p><strong>Approved:</strong> ${cars.filter(c => c.isApproved).length}</p>
-          <p><strong>Pending Approval:</strong> ${cars.filter(c => !c.isApproved).length}</p>
-        </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Car</th>
-              <th>Year</th>
-              <th>Category</th>
-              <th style="text-align: right;">Price</th>
-              <th style="text-align: center;">Seats</th>
-              <th>Location</th>
-              <th style="text-align: center;">Status</th>
-              <th>Owner</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${carsRows}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-    
-    const pdfBuffer = await generatePdfFromHtml(htmlContent);
-    
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=cars-report-${new Date().toISOString().split('T')[0]}.pdf`);
-    res.setHeader('Content-Length', pdfBuffer.length);
-    res.setHeader('Cache-Control', 'no-cache');
-    res.end(pdfBuffer, 'binary');
+    res.end(pdfBuffer);
   } catch (error) {
-    console.error('PDF export error:', error);
+    console.error('❌ PDF export error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Export cars to Excel (CSV format)
+// Export cars to Excel (proper XLSX format)
 const exportCarsExcel = async (req, res) => {
   try {
     const cars = await Car.find().populate('owner', 'name email');
+    const ExcelJS = require('exceljs');
     
-    let csvContent = 'Brand,Model,Year,Category,Price/Day,Seats,Transmission,Fuel,Location,Status,Approved,Owner,Owner Type\n';
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'RentX Admin';
+    workbook.created = new Date();
     
+    const worksheet = workbook.addWorksheet('Cars Report');
+    
+    // Add title
+    worksheet.mergeCells('A1:M1');
+    worksheet.getCell('A1').value = 'RentX - Car Rental';
+    worksheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FFF97316' } };
+    worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(1).height = 35;
+    
+    // Add subtitle
+    worksheet.mergeCells('A2:M2');
+    worksheet.getCell('A2').value = 'Cars Report';
+    worksheet.getCell('A2').font = { size: 14, bold: false, color: { argb: 'FF6B7280' } };
+    worksheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(2).height = 25;
+    
+    // Add headers
+    worksheet.addRow([]);
+    const headerRow = worksheet.addRow([
+      'Brand', 'Model', 'Year', 'Category', 'Price/Day', 'Seats', 
+      'Transmission', 'Fuel', 'Location', 'Status', 'Approved', 'Owner', 'Owner Type'
+    ]);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF97316' }
+    };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerRow.height = 25;
+    
+    // Set column widths
+    worksheet.columns = [
+      { key: 'brand', width: 15 },
+      { key: 'model', width: 15 },
+      { key: 'year', width: 10 },
+      { key: 'category', width: 12 },
+      { key: 'price', width: 12 },
+      { key: 'seats', width: 8 },
+      { key: 'transmission', width: 12 },
+      { key: 'fuel', width: 10 },
+      { key: 'location', width: 20 },
+      { key: 'status', width: 12 },
+      { key: 'approved', width: 10 },
+      { key: 'owner', width: 20 },
+      { key: 'ownerType', width: 12 }
+    ];
+    
+    // Add data rows
     cars.forEach(car => {
-      csvContent += `${car.brand},${car.model},${car.year},${car.category},₹${car.pricePerDay},${car.seating_capacity},${car.transmission},${car.fuel_type},${car.location},${car.isAvailable ? 'Available' : 'Unavailable'},${car.isApproved ? 'Yes' : 'No'},${car.owner?.name || 'N/A'},${car.ownerType}\n`;
+      const dataRow = worksheet.addRow([
+        car.brand,
+        car.model,
+        car.year,
+        car.category,
+        `₹${car.pricePerDay}`,
+        car.seating_capacity,
+        car.transmission,
+        car.fuel_type,
+        car.location,
+        car.isAvailable ? 'Available' : 'Unavailable',
+        car.isApproved ? 'Yes' : 'No',
+        car.owner?.name || 'N/A',
+        car.ownerType
+      ]);
+      
+      dataRow.alignment = { horizontal: 'center', vertical: 'middle' };
+      dataRow.border = {
+        bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } }
+      };
     });
     
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=cars-report-${new Date().toISOString().split('T')[0]}.csv`);
-    res.send(csvContent);
+    // Add summary
+    worksheet.addRow([]);
+    const summaryRow = worksheet.addRow([
+      'SUMMARY',
+      `Total: ${cars.length}`,
+      `Available: ${cars.filter(c => c.isAvailable).length}`,
+      `Approved: ${cars.filter(c => c.isApproved).length}`
+    ]);
+    summaryRow.font = { bold: true };
+    summaryRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF0FDF4' }
+    };
+    
+    // Generate buffer
+    const buffer = await workbook.xlsx.writeBuffer();
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=cars-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
   } catch (error) {
-    console.error('CSV export error:', error);
+    console.error('Excel export error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -392,147 +487,144 @@ const exportCarsExcel = async (req, res) => {
 // Export bookings to PDF
 const exportBookingsPDF = async (req, res) => {
   try {
+    console.log('📄 Starting PDF export for bookings...');
     const bookings = await Booking.find()
       .populate('userId', 'name email')
       .populate('carId', 'brand model');
     
-    const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
-    const confirmedCount = bookings.filter(b => b.status === 'confirmed').length;
-    const completedCount = bookings.filter(b => b.status === 'completed').length;
-    const pendingCount = bookings.filter(b => b.status === 'pending').length;
+    console.log(`📊 Found ${bookings.length} bookings to export`);
     
-    let bookingsRows = '';
-    bookings.forEach((booking, index) => {
-      const car = booking.carId;
-      const user = booking.userId;
-      
-      const statusColors = {
-        confirmed: { bg: '#dcfce7', text: '#166534' },
-        completed: { bg: '#dbeafe', text: '#1e40af' },
-        pending: { bg: '#fef3c7', text: '#92400e' },
-        cancelled: { bg: '#fee2e2', text: '#dc2626' }
-      };
-      
-      const statusColor = statusColors[booking.status] || { bg: '#f3f4f6', text: '#374151' };
-      
-      bookingsRows += `
-        <tr style="border-bottom: 1px solid #e5e7eb;">
-          <td style="padding: 10px;">${index + 1}</td>
-          <td style="padding: 10px;">${booking.bookingId || `#${index + 1}`}</td>
-          <td style="padding: 10px;">${user?.name || 'N/A'}</td>
-          <td style="padding: 10px;">${car ? `${car.brand} ${car.model}` : 'N/A'}</td>
-          <td style="padding: 10px;">${new Date(booking.pickupDate).toLocaleDateString()}</td>
-          <td style="padding: 10px;">${new Date(booking.returnDate).toLocaleDateString()}</td>
-          <td style="padding: 10px; text-align: right;">₹${(booking.totalAmount || 0).toLocaleString('en-IN')}</td>
-          <td style="padding: 10px; text-align: center;">
-            <span style="background: ${statusColor.bg}; color: ${statusColor.text}; padding: 4px 8px; border-radius: 4px; font-size: 10px;">
-              ${booking.status}
-            </span>
-          </td>
-        </tr>
-      `;
+    console.log('📝 Generating PDF with pdfmake...');
+    const pdfBuffer = await generateBookingsReportPDF(bookings);
+    console.log(`✅ PDF generated successfully (${pdfBuffer.length} bytes)`);
+    
+    // Set proper headers for PDF download
+    res.writeHead(200, {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="bookings-report-${new Date().toISOString().split('T')[0]}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
     });
     
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Bookings Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; font-size: 11px; }
-          h1 { color: #059669; text-align: center; margin-bottom: 10px; }
-          h2 { color: #6b7280; text-align: center; margin-bottom: 30px; font-weight: normal; font-size: 13px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background: #059669; color: white; padding: 10px; text-align: left; font-size: 10px; }
-          .summary { background: #f0fdf4; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-around; }
-          .summary-item { text-align: center; }
-          .summary-item h3 { color: #059669; margin: 0; font-size: 24px; }
-          .summary-item p { margin: 5px 0; color: #6b7280; font-size: 11px; }
-        </style>
-      </head>
-      <body>
-        <h1>🚗 RentX - Bookings Report</h1>
-        <h2>Generated: ${new Date().toLocaleString()}</h2>
-        
-        <div class="summary">
-          <div class="summary-item">
-            <h3>${bookings.length}</h3>
-            <p>Total Bookings</p>
-          </div>
-          <div class="summary-item">
-            <h3>₹${totalRevenue.toLocaleString('en-IN')}</h3>
-            <p>Total Revenue</p>
-          </div>
-          <div class="summary-item">
-            <h3>${confirmedCount}</h3>
-            <p>Confirmed</p>
-          </div>
-          <div class="summary-item">
-            <h3>${completedCount}</h3>
-            <p>Completed</p>
-          </div>
-          <div class="summary-item">
-            <h3>${pendingCount}</h3>
-            <p>Pending</p>
-          </div>
-        </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Booking ID</th>
-              <th>Customer</th>
-              <th>Car</th>
-              <th>Pickup</th>
-              <th>Return</th>
-              <th style="text-align: right;">Amount</th>
-              <th style="text-align: center;">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${bookingsRows}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-    
-    const pdfBuffer = await generatePdfFromHtml(htmlContent);
-    
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=bookings-report-${new Date().toISOString().split('T')[0]}.pdf`);
-    res.setHeader('Content-Length', pdfBuffer.length);
-    res.setHeader('Cache-Control', 'no-cache');
-    res.end(pdfBuffer, 'binary');
+    res.end(pdfBuffer);
   } catch (error) {
-    console.error('PDF export error:', error);
+    console.error('❌ PDF export error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Export bookings to Excel (CSV format)
+// Export bookings to Excel (proper XLSX format)
 const exportBookingsExcel = async (req, res) => {
   try {
     const bookings = await Booking.find()
       .populate('userId', 'name email phone')
       .populate('carId', 'brand model');
     
-    let csvContent = 'Booking ID,Customer,Email,Phone,Car,Pickup Date,Return Date,Amount,Status,Payment Status,Created\n';
+    const ExcelJS = require('exceljs');
     
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'RentX Admin';
+    workbook.created = new Date();
+    
+    const worksheet = workbook.addWorksheet('Bookings Report');
+    
+    // Add title
+    worksheet.mergeCells('A1:K1');
+    worksheet.getCell('A1').value = 'RentX - Car Rental';
+    worksheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FFF97316' } };
+    worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(1).height = 35;
+    
+    // Add subtitle
+    worksheet.mergeCells('A2:K2');
+    worksheet.getCell('A2').value = 'Bookings Report';
+    worksheet.getCell('A2').font = { size: 14, bold: false, color: { argb: 'FF6B7280' } };
+    worksheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(2).height = 25;
+    
+    // Add headers
+    worksheet.addRow([]);
+    const headerRow = worksheet.addRow([
+      'Booking ID', 'Customer', 'Email', 'Phone', 'Car', 
+      'Pickup Date', 'Return Date', 'Amount', 'Status', 'Payment Status', 'Created'
+    ]);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF97316' }
+    };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerRow.height = 25;
+    
+    // Set column widths
+    worksheet.columns = [
+      { key: 'bookingId', width: 15 },
+      { key: 'customer', width: 20 },
+      { key: 'email', width: 25 },
+      { key: 'phone', width: 15 },
+      { key: 'car', width: 20 },
+      { key: 'pickup', width: 15 },
+      { key: 'return', width: 15 },
+      { key: 'amount', width: 15 },
+      { key: 'status', width: 12 },
+      { key: 'payment', width: 15 },
+      { key: 'created', width: 15 }
+    ];
+    
+    // Add data rows
     bookings.forEach((booking, index) => {
       const car = booking.carId;
       const user = booking.userId;
       
-      csvContent += `${booking.bookingId || `#${index + 1}`},${user?.name || 'N/A'},${user?.email || 'N/A'},${user?.phone || 'N/A'},${car ? `${car.brand} ${car.model}` : 'N/A'},${new Date(booking.pickupDate).toLocaleDateString()},${new Date(booking.returnDate).toLocaleDateString()},₹${(booking.totalAmount || 0).toLocaleString('en-IN')},${booking.status},${booking.paymentStatus || 'pending'},${new Date(booking.createdAt).toLocaleDateString()}\n`;
+      const dataRow = worksheet.addRow([
+        booking.bookingId || `#${index + 1}`,
+        user?.name || 'N/A',
+        user?.email || 'N/A',
+        user?.phone || 'N/A',
+        car ? `${car.brand} ${car.model}` : 'N/A',
+        new Date(booking.pickupDate).toLocaleDateString(),
+        new Date(booking.returnDate).toLocaleDateString(),
+        `₹${(booking.totalAmount || 0).toLocaleString('en-IN')}`,
+        booking.status,
+        booking.paymentStatus || 'pending',
+        new Date(booking.createdAt).toLocaleDateString()
+      ]);
+      
+      dataRow.alignment = { horizontal: 'center', vertical: 'middle' };
+      dataRow.border = {
+        bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } }
+      };
     });
     
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=bookings-report-${new Date().toISOString().split('T')[0]}.csv`);
-    res.send(csvContent);
+    // Add summary
+    const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+    worksheet.addRow([]);
+    const summaryRow = worksheet.addRow([
+      'SUMMARY',
+      `Total Bookings: ${bookings.length}`,
+      `Total Revenue: ₹${totalRevenue.toLocaleString('en-IN')}`,
+      `Confirmed: ${bookings.filter(b => b.status === 'confirmed').length}`,
+      `Completed: ${bookings.filter(b => b.status === 'completed').length}`
+    ]);
+    summaryRow.font = { bold: true };
+    summaryRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF0FDF4' }
+    };
+    
+    // Generate buffer
+    const buffer = await workbook.xlsx.writeBuffer();
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=bookings-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
   } catch (error) {
-    console.error('CSV export error:', error);
+    console.error('Excel export error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -664,6 +756,261 @@ const getAvailableCarsForReplacement = async (req, res) => {
   }
 };
 
+// Recalculate platform earnings for all existing bookings
+const recalculatePlatformEarnings = async (req, res) => {
+  try {
+    console.log('🔄 Starting platform earnings recalculation...');
+    
+    const bookings = await Booking.find({});
+    console.log(`📊 Found ${bookings.length} bookings to process`);
+    
+    let updated = 0;
+    let skipped = 0;
+    
+    for (const booking of bookings) {
+      try {
+        // Get car details
+        const car = await Car.findById(booking.carId || booking.car);
+        
+        if (!car) {
+          console.log(`⚠️  Car not found for booking ${booking._id}`);
+          skipped++;
+          continue;
+        }
+        
+        const totalAmount = booking.totalAmount || booking.price || 0;
+        
+        let platformEarnings = 0;
+        let ownerEarnings = 0;
+        let commissionRate = 60;
+        
+        if (car.ownerType === 'user' || car.ownerType === 'employee') {
+          // User/Employee-owned car: owner gets 40%, platform gets 60%
+          ownerEarnings = Math.round((totalAmount * 40) / 100);
+          platformEarnings = totalAmount - ownerEarnings;
+        } else {
+          // Admin-owned car: platform gets 100%
+          platformEarnings = totalAmount;
+          ownerEarnings = 0;
+        }
+        
+        // Update booking
+        await Booking.updateOne(
+          { _id: booking._id },
+          { 
+            $set: { 
+              platformEarnings,
+              ownerEarnings,
+              commissionRate
+            } 
+          }
+        );
+        
+        updated++;
+        
+        if (updated % 10 === 0) {
+          console.log(`✅ Updated ${updated} bookings...`);
+        }
+      } catch (error) {
+        console.error(`❌ Error updating booking ${booking._id}:`, error.message);
+        skipped++;
+      }
+    }
+    
+    console.log(`✅ Recalculation complete! Updated: ${updated}, Skipped: ${skipped}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Successfully updated ${updated} bookings`,
+      updated,
+      skipped,
+      total: bookings.length
+    });
+  } catch (error) {
+    console.error('❌ Recalculation error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};
+
+// Employee delete user account (from chat request)
+const deleteUserAccountByAdmin = async (req, res) => {
+  try {
+    const { userId, reason } = req.body;
+
+    if (!userId) {
+      return res.json({ success: false, message: "User ID is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    // Import account deletion utility
+    const { deleteUserAccount } = require('../utils/accountDeletion');
+
+    // Delete user account immediately
+    await deleteUserAccount(userId);
+
+    // Send deletion confirmation email
+    const { sendAccountDeletionEmail } = require('../utils/emailService');
+    await sendAccountDeletionEmail(user.email, user.name);
+
+    res.json({ 
+      success: true, 
+      message: "User account deleted successfully and confirmation email sent" 
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// Recalculate all car ratings
+const recalculateAllCarRatings = async (req, res) => {
+  try {
+    console.log('🔄 Starting car ratings recalculation...');
+    
+    const { updateCarRating } = require('../services/reviewService');
+    const cars = await Car.find({});
+    console.log(`📊 Found ${cars.length} cars to process`);
+    
+    let updated = 0;
+    let skipped = 0;
+    
+    for (const car of cars) {
+      try {
+        await updateCarRating(car._id);
+        updated++;
+        
+        if (updated % 10 === 0) {
+          console.log(`✅ Updated ${updated} cars...`);
+        }
+      } catch (error) {
+        console.error(`❌ Error updating car ${car._id}:`, error.message);
+        skipped++;
+      }
+    }
+    
+    console.log(`✅ Recalculation complete! Updated: ${updated}, Skipped: ${skipped}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Successfully updated ${updated} car ratings`,
+      updated,
+      skipped,
+      total: cars.length
+    });
+  } catch (error) {
+    console.error('❌ Recalculation error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};
+
+// Employee Account Deletion Request Management
+
+const getEmployeeDeletionRequests = async (req, res) => {
+  try {
+    const requests = await EmployeeAccountDeletionRequest.find({ status: 'pending' })
+      .populate('employeeId', 'name email role')
+      .sort({ createdAt: -1 });
+
+    res.json({ 
+      success: true, 
+      requests 
+    });
+  } catch (error) {
+    console.error('Get employee deletion requests error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch deletion requests' 
+    });
+  }
+};
+
+const approveEmployeeDeletion = async (req, res) => {
+  try {
+    const { requestId } = req.body;
+    const adminId = req.user._id;
+
+    const request = await EmployeeAccountDeletionRequest.findById(requestId)
+      .populate('employeeId', 'name email');
+
+    if (!request) {
+      return res.json({ success: false, message: 'Deletion request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.json({ success: false, message: 'Request already processed' });
+    }
+
+    // Delete the employee account
+    await deleteUserAccount(request.employeeId._id);
+
+    // Update request status
+    request.status = 'approved';
+    request.reviewedBy = adminId;
+    request.reviewedAt = new Date();
+    await request.save();
+
+    res.json({ 
+      success: true, 
+      message: `Employee account ${request.employeeId.name} deleted successfully` 
+    });
+  } catch (error) {
+    console.error('Approve employee deletion error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to approve deletion request' 
+    });
+  }
+};
+
+const rejectEmployeeDeletion = async (req, res) => {
+  try {
+    const { requestId, rejectionReason } = req.body;
+    const adminId = req.user._id;
+
+    if (!rejectionReason || !rejectionReason.trim()) {
+      return res.json({ success: false, message: 'Rejection reason is required' });
+    }
+
+    const request = await EmployeeAccountDeletionRequest.findById(requestId);
+
+    if (!request) {
+      return res.json({ success: false, message: 'Deletion request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.json({ success: false, message: 'Request already processed' });
+    }
+
+    // Update request status
+    request.status = 'rejected';
+    request.reviewedBy = adminId;
+    request.reviewedAt = new Date();
+    request.rejectionReason = rejectionReason.trim();
+    await request.save();
+
+    res.json({ 
+      success: true, 
+      message: 'Deletion request rejected successfully' 
+    });
+  } catch (error) {
+    console.error('Reject employee deletion error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to reject deletion request' 
+    });
+  }
+};
+
 module.exports = {
   isAdmin,
   getDashboardAnalytics,
@@ -675,7 +1022,15 @@ module.exports = {
   exportBookingsPDF,
   exportBookingsExcel,
   getAllUsers,
+  getAdminUsers,
   getAllBookings,
   replaceCarInBooking,
-  getAvailableCarsForReplacement
+  getAvailableCarsForReplacement,
+  recalculatePlatformEarnings,
+  recalculateAllCarRatings,
+  deleteUserAccountByAdmin,
+  getEmployeeDeletionRequests,
+  approveEmployeeDeletion,
+  rejectEmployeeDeletion
 };
+

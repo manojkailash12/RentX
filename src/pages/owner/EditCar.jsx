@@ -4,6 +4,7 @@ import { useAppContext } from '../../context/AppContext';
 import { assets } from '../../assets/assets';
 import toast from 'react-hot-toast';
 import Title from '../../components/owner/Title';
+import BackButton from '../../components/BackButton';
 
 const EditCar = () => {
   const { id } = useParams();
@@ -15,6 +16,7 @@ const EditCar = () => {
   const [carData, setCarData] = useState({
     brand: '',
     model: '',
+    registration_number: '',
     year: '',
     category: '',
     seating_capacity: '',
@@ -42,6 +44,7 @@ const EditCar = () => {
         setCarData({
           brand: car.brand,
           model: car.model,
+          registration_number: car.registration_number || '',
           year: car.year,
           category: car.category,
           seating_capacity: car.seating_capacity,
@@ -157,6 +160,9 @@ const EditCar = () => {
 
   return (
     <div className='px-4 pt-10 md:px-10 w-full'>
+      <div className="mb-4">
+        <BackButton />
+      </div>
       <Title title="Edit Car" subTitle="Update your car details and information" />
       
       <div className='max-w-4xl mx-auto'>
@@ -222,6 +228,24 @@ const EditCar = () => {
                 required
                 className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary'
                 placeholder="e.g., Camry, Civic, X5"
+              />
+            </div>
+
+            {/* Registration Number */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Registration Number *
+              </label>
+              <input
+                type="text"
+                name="registration_number"
+                value={carData.registration_number}
+                onChange={handleInputChange}
+                required
+                minLength="3"
+                maxLength="20"
+                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary'
+                placeholder="e.g., MH-01-AB-1234"
               />
             </div>
 

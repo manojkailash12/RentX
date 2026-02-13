@@ -4,14 +4,63 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
+const cron = require('node-cron');
 
 // Load environment variables
 dotenv.config();
 // Updated: Added detailed logging for registration debugging
 
+// Validate environment variables
+const { checkEnvironment, getEnvironmentInfo } = require('./utils/envValidator.js');
+// Only validate in production or when explicitly enabled
+if (process.env.NODE_ENV === 'production' || process.env.VALIDATE_ENV === 'true') {
+  checkEnvironment(false); // Don't exit on error in serverless environment
+}
+
 // Import database connection
 const connectDB = require('./utils/db.js');
 const User = require('./models/user.js');
+
+// Start automatic account deletion cron service
+let cronStarted = false;
+async function startAccountDeletionCron() {
+  if (cronStarted) return;
+  cronStarted = true;
+  
+  console.log('🚀 [AUTO-DELETE] Starting automatic account deletion service...');
+  console.log('⏰ [AUTO-DELETE] Schedule: Every minute');
+  
+  const { processScheduledDeletions } = require('./utils/accountDeletion');
+  
+  // Schedule the job to run every minute
+  cron.schedule('* * * * *', async () => {
+    try {
+      console.log('🕐 [AUTO-DELETE] Checking for accounts to delete...');
+      const result = await processScheduledDeletions();
+      
+      if (result.deletedCount > 0) {
+        console.log(`✅ [AUTO-DELETE] Deleted ${result.deletedCount} account(s)`);
+      }
+    } catch (error) {
+      console.error('❌ [AUTO-DELETE] Error:', error.message);
+    }
+  });
+  
+  console.log('✅ [AUTO-DELETE] Automatic deletion service started');
+  
+  // Run once immediately on startup
+  try {
+    console.log('🔄 [AUTO-DELETE] Running initial check...');
+    const result = await processScheduledDeletions();
+    if (result.deletedCount > 0) {
+      console.log(`✅ [AUTO-DELETE] Initial check: Deleted ${result.deletedCount} account(s)`);
+    } else {
+      console.log('ℹ️  [AUTO-DELETE] Initial check: No accounts to delete');
+    }
+  } catch (error) {
+    console.error('❌ [AUTO-DELETE] Initial check error:', error.message);
+  }
+}
 
 // Import controllers
 const { 
@@ -21,11 +70,19 @@ const {
   logoutUser,
   logoutAllDevices,
   registerUser, 
-  verifyOTP, 
+  verifyOTP,
+  verifyEmailViaLink,
   resendOTP, 
   getRoles, 
   updateProfile, 
-  updateProfileImage 
+  updateProfileImage,
+  forgotPassword,
+  resetPassword,
+  changePassword,
+  requestAccountDeletion,
+  verifyDeletionOTP,
+  cancelAccountDeletion,
+  getDeletionStatus
 } = require('./controllers/userController.js');
 
 const { 
@@ -39,6 +96,7 @@ const {
   toggleCarAvailability, 
   updateUserImage, 
   getPendingCars, 
+  getCarApprovalStats,
   approveRejectCar 
 } = require('./controllers/ownerController.js');
 
@@ -53,7 +111,8 @@ const {
   calculateDistanceAPI,
   updatePaymentStatus,
   cancelUserBooking,
-  resendInvoiceEmail
+  resendInvoiceEmail,
+  resendReviewEmail
 } = require('./controllers/bookingController.js');
 
 const {
@@ -67,13 +126,141 @@ const {
   exportBookingsPDF,
   exportBookingsExcel,
   getAllUsers,
+  getAdminUsers,
   getAllBookings,
   replaceCarInBooking,
-  getAvailableCarsForReplacement
+  getAvailableCarsForReplacement,
+  recalculatePlatformEarnings,
+  recalculateAllCarRatings,
+  deleteUserAccountByAdmin,
+  getEmployeeDeletionRequests,
+  approveEmployeeDeletion,
+  rejectEmployeeDeletion
 } = require('./controllers/adminController.js');
 
+const {
+  createReview,
+  getCarReviews,
+  getUserReviews,
+  updateReview,
+  deleteReview,
+  respondToReview,
+  getDeletedReviews,
+  submitReviewFromEmail,
+  getAllReviews
+} = require('./controllers/reviewController.js');
+
+const {
+  getOrCreateConversation,
+  getUserConversations,
+  getConversationMessages,
+  sendMessage,
+  markAsRead
+} = require('./controllers/chatController.js');
+
+const {
+  getLoyaltyData,
+  redeemPoints,
+  getLoyaltyHistory,
+  calculateLoyaltyDiscount
+} = require('./controllers/loyaltyController.js');
+
+const {
+  getInsurancePlans,
+  calculateInsuranceCost,
+  addInsuranceToBooking,
+  getBookingInsurance
+} = require('./controllers/insuranceController.js');
+
+const {
+  startGPSTracking,
+  updateGPSLocation,
+  stopGPSTracking,
+  getGPSTracking,
+  getGPSTrackingHistory
+} = require('./controllers/gpsController.js');
+
+const {
+  getOverview,
+  getRevenue,
+  getBookings,
+  getUsers,
+  getOwners,
+  getGeographic,
+  exportData,
+  clearAnalyticsCache,
+  exportAnalyticsExcel,
+  exportAnalyticsPDF,
+  getRevenueTrend,
+  getPaymentMethods,
+  // Individual section exports
+  exportOverviewPDF,
+  exportOverviewExcel,
+  exportBookingStatusPDF,
+  exportBookingStatusExcel,
+  exportTopCarsPDF,
+  exportTopCarsExcel,
+  exportTopOwnersPDF,
+  exportTopOwnersExcel,
+  exportGeographicPDF,
+  exportGeographicExcel
+} = require('./controllers/analyticsController.js');
+
+const {
+  createSupportTicket,
+  getAllSupportTickets,
+  getSupportTicket,
+  updateSupportTicketStatus,
+  addSupportTicketResponse,
+  assignSupportTicket,
+  addSupportTicketAttachment,
+  getSupportTicketAnalytics
+} = require('./controllers/supportController.js');
+
+const {
+  createEmployee,
+  getAllEmployees,
+  getEmployee,
+  updateEmployee,
+  clockIn,
+  clockOut,
+  getAttendance,
+  generatePayroll,
+  getPayroll,
+  paySalary,
+  exportUsersPDF,
+  exportUsersExcel,
+  getDeletedUsers,
+  exportDeletedUsersPDF,
+  exportDeletedUsersExcel,
+  getEmployeeRoleUsers,
+  generateAndEmailPayslip,
+  downloadPayslip,
+  requestAccountDeletion: requestEmployeeAccountDeletion,
+  getMyDeletionRequest,
+  cancelMyDeletionRequest
+} = require('./controllers/employeeController.js');
+
+const {
+  employeeCheckIn,
+  employeeCheckOut,
+  getEmployeeAttendanceHistory,
+  getTodayAttendanceStatus
+} = require('./controllers/employeeAttendanceController.js');
+
+const {
+  createLeaveRequest,
+  getMyLeaveRequests,
+  getAllLeaveRequests,
+  getLeaveRequest,
+  updateLeaveRequest,
+  cancelLeaveRequest,
+  reviewLeaveRequest,
+  getLeaveBalance
+} = require('./controllers/leaveController.js');
+
 // Import middleware
-const { protect } = require('./middleware/auth.js');
+const { protect, isEmployee, isEmployeeOrAdmin } = require('./middleware/auth.js');
 const { upload, isCloudinaryConfigured } = require('./middleware/multerCloudinary.js');
 
 const app = express();
@@ -82,6 +269,10 @@ const app = express();
 const ensureDBConnection = async () => {
   try {
     await connectDB();
+    
+    // Start automatic account deletion cron service after DB connection
+    await startAccountDeletionCron();
+    
     // Removed verbose logging - connection status is logged in db.js
     return true;
   } catch (error) {
@@ -181,8 +372,14 @@ app.use((req, res, next) => {
     if (Buffer.isBuffer(req.body)) {
       try {
         const jsonString = req.body.toString('utf8');
-        req.body = JSON.parse(jsonString);
-        console.log('✅ Converted Buffer to JSON:', req.body);
+        // Only parse if there's actual content
+        if (jsonString.trim().length > 0) {
+          req.body = JSON.parse(jsonString);
+          console.log('✅ Converted Buffer to JSON:', req.body);
+        } else {
+          // Empty body - set to empty object
+          req.body = {};
+        }
       } catch (error) {
         console.error('❌ Failed to parse Buffer:', error.message);
         req.body = {};
@@ -244,8 +441,7 @@ app.get('/uploads/:folder/:filename', (req, res) => {
     const { folder, filename } = req.params;
     const filePath = path.join(uploadsDir, folder, filename);
     
-    console.log('📁 File request:', { folder, filename, filePath, exists: fs.existsSync(filePath) });
-    
+    // Check if file exists locally
     if (fs.existsSync(filePath)) {
       const stat = fs.statSync(filePath);
       const fileSize = stat.size;
@@ -274,13 +470,12 @@ app.get('/uploads/:folder/:filename', (req, res) => {
         fs.createReadStream(filePath).pipe(res);
       }
     } else {
-      console.log('❌ File not found:', filePath);
-      console.log('📂 Uploads dir:', uploadsDir);
-      console.log('📂 Cars dir contents:', fs.existsSync(carsDir) ? fs.readdirSync(carsDir) : 'Directory does not exist');
-      res.status(404).json({ success: false, message: 'File not found' });
+      // File not found locally - likely using Cloudinary
+      // Return 404 silently (this is expected when using cloud storage)
+      res.status(404).json({ success: false, message: 'File not found - using cloud storage' });
     }
   } catch (error) {
-    console.error('Error serving file:', error);
+    console.error('❌ Error serving file:', error);
     res.status(500).json({ success: false, message: 'Error serving file' });
   }
 });
@@ -320,13 +515,15 @@ app.get('/test', (req, res) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
+    const { getEnvironmentInfo } = require('./utils/envValidator.js');
+    
     const healthCheck = {
       success: true,
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       memory: process.memoryUsage(),
-      environment: process.env.NODE_ENV || 'development',
+      environment: getEnvironmentInfo(),
       uploads: {
         directory: uploadsDir,
         exists: fs.existsSync(uploadsDir),
@@ -386,6 +583,7 @@ app.get('/user/check-email/:email', requireDB, async (req, res) => {
 
 app.post('/user/register', requireDB, registerUser);
 app.post('/user/verify-otp', requireDB, verifyOTP);
+app.get('/user/verify-email', requireDB, verifyEmailViaLink);
 app.post('/user/resend-otp', requireDB, resendOTP);
 app.post('/user/login', requireDB, loginUser);
 app.post('/user/logout', logoutUser); // No protect middleware - uses token from header
@@ -393,6 +591,17 @@ app.post('/user/logout-all', protect, requireDB, logoutAllDevices); // Requires 
 app.get('/user/data', protect, requireDB, getUserData);
 app.put('/user/profile', protect, requireDB, updateProfile);
 app.put('/user/profile-image', protect, requireDB, upload.single('image'), updateProfileImage);
+
+// Password Reset Routes
+app.post('/user/forgot-password', requireDB, forgotPassword);
+app.post('/user/reset-password', requireDB, resetPassword);
+app.post('/user/change-password', protect, requireDB, changePassword);
+
+// Account Deletion Routes
+app.post('/user/request-deletion', protect, requireDB, requestAccountDeletion);
+app.post('/user/verify-deletion-otp', protect, requireDB, verifyDeletionOTP);
+app.post('/user/cancel-deletion', protect, requireDB, cancelAccountDeletion);
+app.get('/user/deletion-status', protect, requireDB, getDeletionStatus);
 // User cars endpoint - with fallback if DB fails
 app.get('/user/cars', async (req, res) => {
   try {
@@ -428,12 +637,17 @@ app.post('/owner/add-car', upload.single("image"), protect, requireDB, addCar);
 app.get('/owner/cars', protect, requireDB, getOwnerCars);
 app.get('/owner/car/:carId', protect, requireDB, getCarForEdit);
 app.put('/owner/car/:carId', upload.single("image"), protect, requireDB, updateCar);
-app.get('/owner/pending-cars', protect, requireDB, getPendingCars);
-app.post('/owner/approve-reject-car', protect, requireDB, approveRejectCar);
+app.get('/owner/pending-cars', protect, requireDB, isEmployeeOrAdmin, getPendingCars);
+app.get('/owner/car-approval-stats', protect, requireDB, isEmployeeOrAdmin, getCarApprovalStats);
+app.post('/owner/approve-reject-car', protect, requireDB, isEmployeeOrAdmin, approveRejectCar);
 app.post('/owner/toggle-car', protect, requireDB, toggleCarAvailability);
 app.post('/owner/delete-car', protect, requireDB, deleteCar);
 app.get('/owner/dashboard', protect, requireDB, getDashboardData);
 app.post('/owner/update-image', upload.single("image"), protect, requireDB, updateUserImage);
+
+// Employee-specific car routes
+app.post('/employee/add-platform-car', upload.single("image"), protect, requireDB, isEmployee, addCar); // For adding admin cars
+app.post('/employee/add-own-car', upload.single("image"), protect, requireDB, isEmployee, addCar); // For adding employee's own car
 
 // Booking Routes
 app.post('/bookings/check-availability', requireDB, checkAvailabilityOfCar);
@@ -447,20 +661,357 @@ app.post('/bookings/update-payment-status', protect, requireDB, updatePaymentSta
 app.get('/bookings/invoice/:bookingId', protect, requireDB, downloadInvoice);
 app.post('/bookings/cancel/:bookingId', protect, requireDB, cancelUserBooking);
 app.post('/bookings/resend-invoice/:bookingId', protect, requireDB, resendInvoiceEmail);
+app.post('/bookings/resend-review-email/:bookingId', protect, requireDB, resendReviewEmail);
 
 // Admin Routes (with admin middleware)
 app.get('/admin/dashboard', protect, requireDB, isAdmin, getDashboardAnalytics);
 app.get('/admin/earnings/monthly', protect, requireDB, isAdmin, getMonthlyEarnings);
 app.get('/admin/earnings/export/pdf', protect, requireDB, isAdmin, exportEarningsPDF);
 app.get('/admin/earnings/export/excel', protect, requireDB, isAdmin, exportEarningsExcel);
+app.post('/admin/recalculate-earnings', protect, requireDB, isAdmin, recalculatePlatformEarnings);
+app.post('/admin/recalculate-ratings', protect, requireDB, isAdmin, recalculateAllCarRatings);
 app.get('/admin/cars/export/pdf', protect, requireDB, isAdmin, exportCarsPDF);
 app.get('/admin/cars/export/excel', protect, requireDB, isAdmin, exportCarsExcel);
 app.get('/admin/bookings/export/pdf', protect, requireDB, isAdmin, exportBookingsPDF);
 app.get('/admin/bookings/export/excel', protect, requireDB, isAdmin, exportBookingsExcel);
-app.get('/admin/users', protect, requireDB, isAdmin, getAllUsers);
-app.get('/admin/bookings', protect, requireDB, isAdmin, getAllBookings);
-app.post('/admin/replace-car', protect, requireDB, isAdmin, replaceCarInBooking);
-app.get('/admin/available-cars', protect, requireDB, isAdmin, getAvailableCarsForReplacement);
+app.get('/admin/users', protect, requireDB, isEmployeeOrAdmin, getAllUsers);
+app.get('/admin/get-admins', protect, requireDB, getAdminUsers); // Accessible by all authenticated users
+app.get('/admin/bookings', protect, requireDB, isEmployee, getAllBookings);
+app.post('/admin/replace-car', protect, requireDB, isEmployee, replaceCarInBooking);
+app.get('/admin/available-cars', protect, requireDB, isEmployee, getAvailableCarsForReplacement);
+app.post('/admin/delete-user', protect, requireDB, isEmployee, deleteUserAccountByAdmin);
+
+// Employee Account Deletion Request Routes
+app.post('/employee/request-account-deletion', protect, requireDB, requestEmployeeAccountDeletion);
+app.get('/employee/my-deletion-request', protect, requireDB, getMyDeletionRequest);
+app.post('/employee/cancel-deletion-request', protect, requireDB, cancelMyDeletionRequest);
+
+// Admin - Employee Deletion Request Management
+app.get('/admin/employee-deletion-requests', protect, requireDB, isAdmin, getEmployeeDeletionRequests);
+app.post('/admin/approve-employee-deletion', protect, requireDB, isAdmin, approveEmployeeDeletion);
+app.post('/admin/reject-employee-deletion', protect, requireDB, isAdmin, rejectEmployeeDeletion);
+
+// Manual trigger for scheduled account deletions (Admin only)
+app.post('/admin/process-scheduled-deletions', protect, requireDB, isAdmin, async (req, res) => {
+  try {
+    const { processScheduledDeletions } = require('./utils/accountDeletion');
+    const result = await processScheduledDeletions();
+    
+    res.json({
+      success: true,
+      message: `Successfully processed ${result.deletedCount} account deletions`,
+      deletedCount: result.deletedCount,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error processing scheduled deletions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process scheduled deletions',
+      error: error.message
+    });
+  }
+});
+
+// Development-only endpoint for testing scheduled deletions (NO AUTH - LOCAL ONLY)
+// WARNING: Remove or secure this endpoint in production!
+if (process.env.NODE_ENV !== 'production') {
+  app.post('/dev/trigger-deletion', requireDB, async (req, res) => {
+    try {
+      console.log('🔄 [DEV] Manually triggering scheduled deletions...');
+      const { processScheduledDeletions } = require('./utils/accountDeletion');
+      const result = await processScheduledDeletions();
+      
+      console.log(`✅ [DEV] Processed ${result.deletedCount} deletions`);
+      
+      res.json({
+        success: true,
+        message: `[DEV] Successfully processed ${result.deletedCount} account deletions`,
+        deletedCount: result.deletedCount,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ [DEV] Error processing scheduled deletions:', error);
+      res.status(500).json({
+        success: false,
+        message: '[DEV] Failed to process scheduled deletions',
+        error: error.message
+      });
+    }
+  });
+}
+
+// Review Routes
+app.post('/reviews/create', protect, requireDB, createReview);
+app.post('/reviews/submit-from-email', requireDB, submitReviewFromEmail); // No auth - email verification
+app.get('/reviews/all', protect, requireDB, isEmployee, getAllReviews); // Employee only
+app.get('/reviews/car/:carId', getCarReviews);
+app.get('/reviews/user', protect, requireDB, getUserReviews);
+app.put('/reviews/:reviewId', protect, requireDB, updateReview);
+app.delete('/reviews/:reviewId', protect, requireDB, isEmployee, deleteReview); // Employee only
+app.post('/reviews/:reviewId/respond', protect, requireDB, respondToReview);
+app.get('/reviews/deleted', protect, requireDB, isEmployee, getDeletedReviews); // Employee only
+
+// Chat Routes
+app.post('/chat/conversations/create', protect, requireDB, getOrCreateConversation);
+app.get('/chat/conversations', protect, requireDB, getUserConversations);
+app.get('/chat/conversations/:conversationId/messages', protect, requireDB, getConversationMessages);
+app.post('/chat/messages/send', protect, requireDB, sendMessage);
+app.post('/chat/conversations/:conversationId/read', protect, requireDB, markAsRead);
+
+// Loyalty Program Routes
+app.get('/loyalty', protect, requireDB, getLoyaltyData);
+app.post('/loyalty/redeem', protect, requireDB, redeemPoints);
+app.get('/loyalty/history', protect, requireDB, getLoyaltyHistory);
+app.post('/loyalty/calculate-discount', protect, requireDB, calculateLoyaltyDiscount);
+
+// Insurance Routes
+app.get('/insurance/plans', protect, requireDB, getInsurancePlans);
+app.post('/insurance/calculate', protect, requireDB, calculateInsuranceCost);
+app.post('/insurance/add-to-booking', protect, requireDB, addInsuranceToBooking);
+app.get('/insurance/booking/:bookingId', protect, requireDB, getBookingInsurance);
+
+// GPS Tracking Routes
+app.post('/gps/start', protect, requireDB, startGPSTracking);
+app.post('/gps/update', protect, requireDB, updateGPSLocation);
+app.post('/gps/stop', protect, requireDB, stopGPSTracking);
+app.get('/gps/booking/:bookingId', protect, requireDB, getGPSTracking);
+app.get('/gps/booking/:bookingId/history', protect, requireDB, getGPSTrackingHistory);
+
+// Advanced Analytics Routes (Admin only)
+app.get('/analytics/overview', protect, requireDB, getOverview);
+app.get('/analytics/revenue', protect, requireDB, getRevenue);
+app.get('/analytics/bookings', protect, requireDB, getBookings);
+app.get('/analytics/user-metrics', protect, requireDB, getUsers);
+app.get('/analytics/owners', protect, requireDB, getOwners);
+app.get('/analytics/geographic', protect, requireDB, getGeographic);
+app.get('/analytics/revenue-trend', protect, requireDB, getRevenueTrend);
+app.get('/analytics/payment-methods', protect, requireDB, getPaymentMethods);
+app.get('/analytics/export-excel', protect, requireDB, exportAnalyticsExcel);
+app.get('/analytics/export-pdf', protect, requireDB, exportAnalyticsPDF);
+app.post('/analytics/export', protect, requireDB, exportData);
+app.post('/analytics/clear-cache', protect, requireDB, clearAnalyticsCache);
+
+// Individual Section Export Routes
+app.get('/analytics/export-overview-pdf', protect, requireDB, exportOverviewPDF);
+app.get('/analytics/export-overview-excel', protect, requireDB, exportOverviewExcel);
+app.get('/analytics/export-booking-status-pdf', protect, requireDB, exportBookingStatusPDF);
+app.get('/analytics/export-booking-status-excel', protect, requireDB, exportBookingStatusExcel);
+app.get('/analytics/export-top-cars-pdf', protect, requireDB, exportTopCarsPDF);
+app.get('/analytics/export-top-cars-excel', protect, requireDB, exportTopCarsExcel);
+app.get('/analytics/export-top-owners-pdf', protect, requireDB, exportTopOwnersPDF);
+app.get('/analytics/export-top-owners-excel', protect, requireDB, exportTopOwnersExcel);
+app.get('/analytics/export-geographic-pdf', protect, requireDB, exportGeographicPDF);
+app.get('/analytics/export-geographic-excel', protect, requireDB, exportGeographicExcel);
+
+// Support Ticket Routes
+app.post('/support/tickets/create', createSupportTicket); // Public endpoint for email submissions
+app.get('/support/tickets', protect, requireDB, isEmployee, getAllSupportTickets); // Employee only
+app.get('/support/tickets/:ticketId', protect, requireDB, isEmployee, getSupportTicket); // Employee only
+app.put('/support/tickets/:ticketId', protect, requireDB, isEmployee, updateSupportTicketStatus); // Employee only
+app.post('/support/tickets/:ticketId/respond', protect, requireDB, isEmployee, addSupportTicketResponse); // Employee only
+app.put('/support/tickets/:ticketId/assign', protect, requireDB, isEmployee, assignSupportTicket); // Employee only
+app.post('/support/tickets/:ticketId/attachments', protect, requireDB, isEmployee, upload.single('file'), addSupportTicketAttachment); // Employee only
+app.get('/support/analytics', protect, requireDB, isEmployee, getSupportTicketAnalytics); // Employee only
+
+// Employee & Payroll Routes
+app.get('/employees/available-users', protect, requireDB, isAdmin, getEmployeeRoleUsers); // Get users with employee role
+app.post('/employees/create', protect, requireDB, isAdmin, createEmployee);
+app.get('/employees', protect, requireDB, isAdmin, getAllEmployees);
+app.get('/employees/:employeeId', protect, requireDB, getEmployee);
+app.put('/employees/:employeeId', protect, requireDB, isAdmin, updateEmployee);
+
+// Attendance Routes
+app.post('/attendance/clock-in', protect, requireDB, clockIn);
+app.post('/attendance/clock-out', protect, requireDB, clockOut);
+app.get('/attendance', protect, requireDB, getAttendance);
+
+// Employee Attendance Routes (Self-Service)
+app.post('/employee-attendance/checkin', protect, requireDB, isEmployee, employeeCheckIn);
+app.put('/employee-attendance/checkout', protect, requireDB, isEmployee, employeeCheckOut);
+app.get('/employee-attendance/history/:userId', protect, requireDB, isEmployee, getEmployeeAttendanceHistory);
+app.get('/employee-attendance/today/:userId', protect, requireDB, isEmployee, getTodayAttendanceStatus);
+
+// Leave Management Routes
+app.post('/leave/request', protect, requireDB, isEmployee, createLeaveRequest);
+app.get('/leave/my-requests', protect, requireDB, isEmployee, getMyLeaveRequests);
+app.get('/leave/all', protect, requireDB, isEmployeeOrAdmin, getAllLeaveRequests);
+app.get('/leave/balance', protect, requireDB, isEmployee, getLeaveBalance);
+app.get('/leave/:leaveId', protect, requireDB, getLeaveRequest);
+app.put('/leave/:leaveId', protect, requireDB, isEmployee, updateLeaveRequest);
+app.post('/leave/:leaveId/cancel', protect, requireDB, isEmployee, cancelLeaveRequest);
+app.post('/leave/:leaveId/review', protect, requireDB, isEmployeeOrAdmin, reviewLeaveRequest);
+
+// Payroll Routes
+app.post('/payroll/generate', protect, requireDB, isAdmin, generatePayroll);
+app.get('/payroll', protect, requireDB, getPayroll);
+app.post('/payroll/:payrollId/pay', protect, requireDB, isAdmin, paySalary);
+app.post('/payroll/:payrollId/email', protect, requireDB, isAdmin, generateAndEmailPayslip);
+app.get('/payroll/:payrollId/download', protect, requireDB, downloadPayslip);
+
+// Employee Users Export Routes
+app.get('/employees/users/export/pdf', protect, requireDB, isEmployee, exportUsersPDF);
+app.get('/employees/users/export/excel', protect, requireDB, isEmployee, exportUsersExcel);
+
+// Employee Deleted Users Routes
+app.get('/employees/deleted-users', protect, requireDB, isEmployeeOrAdmin, getDeletedUsers);
+app.get('/employees/deleted-users/export/pdf', protect, requireDB, isEmployee, exportDeletedUsersPDF);
+app.get('/employees/deleted-users/export/excel', protect, requireDB, isEmployee, exportDeletedUsersExcel);
+
+// ========== NEW FEATURES ROUTES ==========
+
+// Biometric Attendance Routes
+const {
+  registerDevice,
+  enrollBiometric,
+  verifyBiometric,
+  getDevices,
+  getEmployeeTemplates
+} = require('./controllers/biometricController.js');
+
+app.post('/biometric/register-device', protect, requireDB, isAdmin, registerDevice);
+app.post('/biometric/enroll', protect, requireDB, enrollBiometric);
+app.post('/biometric/verify', requireDB, verifyBiometric);
+app.get('/biometric/devices', protect, requireDB, isEmployeeOrAdmin, getDevices);
+app.get('/biometric/templates/:userId', protect, requireDB, getEmployeeTemplates);
+
+// AI-Powered Car Recommendations Routes
+const {
+  getRecommendations,
+  trackSearch,
+  getSimilarCars,
+  getTrendingCars
+} = require('./controllers/recommendationController.js');
+
+app.get('/recommendations', protect, requireDB, getRecommendations);
+app.post('/recommendations/track-search', protect, requireDB, trackSearch);
+app.get('/recommendations/similar/:carId', requireDB, getSimilarCars);
+app.get('/recommendations/trending', requireDB, getTrendingCars);
+
+// Dynamic Pricing Routes
+const {
+  calculateDynamicPrice,
+  createPricingRule,
+  getPricingRules,
+  updatePricingRule,
+  deletePricingRule,
+  getDemandAnalytics
+} = require('./controllers/dynamicPricingController.js');
+
+app.post('/pricing/calculate', requireDB, calculateDynamicPrice);
+app.post('/pricing/rules', protect, requireDB, isAdmin, createPricingRule);
+app.get('/pricing/rules', protect, requireDB, isAdmin, getPricingRules);
+app.put('/pricing/rules/:ruleId', protect, requireDB, isAdmin, updatePricingRule);
+app.delete('/pricing/rules/:ruleId', protect, requireDB, isAdmin, deletePricingRule);
+app.get('/pricing/analytics', protect, requireDB, isAdmin, getDemandAnalytics);
+
+// Performance Review Routes
+const {
+  createReview: createPerformanceReview,
+  getReviews: getPerformanceReviews,
+  updateReview: updatePerformanceReview,
+  acknowledgeReview,
+  getPerformanceAnalytics
+} = require('./controllers/performanceController.js');
+
+app.post('/performance/reviews', protect, requireDB, isAdmin, createPerformanceReview);
+app.get('/performance/reviews', protect, requireDB, getPerformanceReviews);
+app.put('/performance/reviews/:reviewId', protect, requireDB, isAdmin, updatePerformanceReview);
+app.post('/performance/reviews/:reviewId/acknowledge', protect, requireDB, acknowledgeReview);
+app.get('/performance/analytics', protect, requireDB, getPerformanceAnalytics);
+
+// Training and Certification Routes
+const {
+  createTraining,
+  getTrainings,
+  updateTraining,
+  enrollEmployee,
+  getEnrollments,
+  markAttendance,
+  submitAssessment,
+  submitFeedback,
+  getEmployeeCertifications,
+  getTrainingAnalytics
+} = require('./controllers/trainingController.js');
+
+app.post('/training/create', protect, requireDB, isAdmin, createTraining);
+app.get('/training/list', protect, requireDB, getTrainings);
+app.put('/training/:trainingId', protect, requireDB, isAdmin, updateTraining);
+app.post('/training/enroll', protect, requireDB, isAdmin, enrollEmployee);
+app.get('/training/enrollments', protect, requireDB, getEnrollments);
+app.post('/training/attendance/:enrollmentId', protect, requireDB, isAdmin, markAttendance);
+app.post('/training/assessment/:enrollmentId', protect, requireDB, isAdmin, submitAssessment);
+app.post('/training/feedback/:enrollmentId', protect, requireDB, submitFeedback);
+app.get('/training/certifications/:employeeId', protect, requireDB, getEmployeeCertifications);
+app.get('/training/analytics', protect, requireDB, isAdmin, getTrainingAnalytics);
+
+// ========== END NEW FEATURES ROUTES ==========
+
+// Predictive Maintenance Routes
+const {
+  predictMaintenance,
+  getMaintenanceAlerts,
+  createMaintenanceAlert,
+  updateMaintenanceStatus
+} = require('./controllers/maintenanceController.js');
+
+app.get('/maintenance/predict/:carId', protect, requireDB, predictMaintenance);
+app.get('/maintenance/alerts', protect, requireDB, getMaintenanceAlerts);
+app.post('/maintenance/alerts', protect, requireDB, createMaintenanceAlert);
+app.put('/maintenance/alerts/:alertId', protect, requireDB, updateMaintenanceStatus);
+
+// EV Charging Station Routes
+const {
+  getNearbyStations,
+  getAllStations,
+  createStation,
+  updateStationAvailability,
+  addStationReview,
+  seedStations
+} = require('./controllers/chargingStationController.js');
+
+app.get('/charging/nearby', getNearbyStations);
+app.get('/charging/stations', getAllStations);
+app.post('/charging/stations', protect, requireDB, isAdmin, createStation);
+app.put('/charging/stations/:stationId/availability', protect, requireDB, updateStationAvailability);
+app.post('/charging/stations/:stationId/review', protect, requireDB, addStationReview);
+app.post('/charging/seed', protect, requireDB, isAdmin, seedStations);
+
+// Seed charging stations (Admin only - for development)
+app.post('/charging/seed', protect, requireDB, isAdmin, async (req, res) => {
+  try {
+    const { seedChargingStations } = require('./utils/seedChargingStations.js');
+    const result = await seedChargingStations();
+    res.json({ success: true, message: `Seeded ${result.count} charging stations` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Removed: Geofencing, Voice Commands, Third-Party APIs, AR Preview, 3D Customization, Demand Forecasting, and Damage Detection routes
+
+// Smart Contract Routes
+const {
+  createSmartContract,
+  getSmartContract,
+  updateMilestone,
+  addPayment,
+  fileDispute,
+  resolveDispute,
+  completeContract,
+  getAllContracts,
+  getContractStatistics
+} = require('./controllers/smartContractController.js');
+
+app.post('/smart-contract/create', protect, requireDB, createSmartContract);
+app.get('/smart-contract/booking/:bookingId', protect, requireDB, getSmartContract);
+app.post('/smart-contract/milestone', protect, requireDB, updateMilestone);
+app.post('/smart-contract/payment', protect, requireDB, addPayment);
+app.post('/smart-contract/dispute', protect, requireDB, fileDispute);
+app.post('/smart-contract/resolve-dispute', protect, requireDB, isAdmin, resolveDispute);
+app.put('/smart-contract/:contractId/complete', protect, requireDB, completeContract);
+app.get('/smart-contract/all', protect, requireDB, isAdmin, getAllContracts);
+app.get('/smart-contract/statistics', protect, requireDB, isAdmin, getContractStatistics);
 
 // Global error handling middleware
 app.use((error, req, res, next) => {
@@ -550,7 +1101,11 @@ app.use((req, res) => {
 
 // Export the serverless function with proper binary handling
 module.exports.handler = serverless(app, {
-  binary: ['application/pdf', 'image/*'], // Specify binary MIME types
+  binary: [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/*'
+  ], // Specify binary MIME types
   request: (request, event, context) => {
     // Pass through binary data
     request.isBase64Encoded = event.isBase64Encoded;

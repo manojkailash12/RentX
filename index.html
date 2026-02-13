@@ -3,22 +3,61 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=0.80, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="theme-color" content="#059669" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
     <title>RentX - Car Rental Platform</title>
     <meta name="description" content="Premium car rental platform with enterprise features, real-time booking, and comprehensive management system." />
     <meta name="keywords" content="car rental, vehicle booking, car hire, transportation, travel" />
     <meta name="author" content="RentX Team" />
     
-    <!-- Set default zoom to 80% -->
+    <!-- Mobile-optimized styles -->
     <style>
-      html {
-        zoom: 80%;
-        -moz-transform: scale(0.80);
-        -moz-transform-origin: 0 0;
+      * {
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        -webkit-touch-callout: none;
       }
+      
+      html {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+        touch-action: manipulation;
+      }
+      
       body {
         margin: 0;
         padding: 0;
+        overscroll-behavior-y: contain;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      
+      /* Safe area for notched devices */
+      @supports (padding: max(0px)) {
+        body {
+          padding-left: max(0px, env(safe-area-inset-left));
+          padding-right: max(0px, env(safe-area-inset-right));
+        }
+      }
+      
+      /* Smooth scrolling */
+      html {
+        scroll-behavior: smooth;
+      }
+      
+      /* Better touch targets */
+      button, a, input, select, textarea {
+        min-height: 44px;
+        min-width: 44px;
+      }
+      
+      /* Prevent zoom on input focus (iOS) */
+      input, select, textarea {
+        font-size: 16px !important;
       }
     </style>
     

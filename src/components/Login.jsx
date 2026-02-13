@@ -1,8 +1,11 @@
 import React from 'react'
 import { useAppContext } from '../context/AppContext';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import ForgotPassword from './Auth/ForgotPassword';
 
 const Login = () => {
+    const { t } = useTranslation();
 
     const {setShowLogin, loginMode, axios, setToken, navigate} = useAppContext()
 
@@ -13,13 +16,20 @@ const Login = () => {
     const [loginIdentifier, setLoginIdentifier] = React.useState(""); // For login with email/username/name
     const [password, setPassword] = React.useState("");
     const [role, setRole] = React.useState("user");
+    const [shift, setShift] = React.useState("morning");
     const [otp, setOtp] = React.useState("");
     const [showOtpVerification, setShowOtpVerification] = React.useState(false);
+    const [showForgotPassword, setShowForgotPassword] = React.useState(false);
     const [roles, setRoles] = React.useState([
         {
             value: 'user',
             label: 'User',
             description: 'Customer who can book cars and optionally list personal vehicles for rent'
+        },
+        {
+            value: 'employee',
+            label: 'Employee',
+            description: 'Staff member with access to car approvals, reviews, support tickets, and user management'
         },
         {
             value: 'admin',
@@ -70,9 +80,16 @@ const Login = () => {
             setError(""); // Clear previous errors
 
             if (state === "register") {
-                console.log('📝 Registering user:', { name, username, email, role });
+                console.log('📝 Registering user:', { name, username, email, role, shift: role === 'employee' ? shift : undefined });
                 // Registration - send OTP
-                const {data} = await axios.post('/user/register', {name, username, email, password, role});
+                const {data} = await axios.post('/user/register', {
+                    name, 
+                    username, 
+                    email, 
+                    password, 
+                    role,
+                    ...(role === 'employee' && { shift }) // Only include shift if role is employee
+                });
                 
                 console.log('📥 Registration response:', data);
                 
@@ -277,17 +294,17 @@ const Login = () => {
                     </button>
 
                     <p className="text-2xl font-medium m-auto text-center">
-                        <span className="text-green-600">Email</span> Verification
+                        <span className="text-green-600">{t('auth.emailVerification')}</span>
                     </p>
                     <p className="text-center text-gray-600 text-sm">
-                        We've sent a 6-digit OTP to <strong>{email}</strong>
+                        {t('auth.otpSentTo')} <strong>{email}</strong>
                     </p>
                     <div className="w-full">
-                        <p>Enter OTP</p>
+                        <p>{t('auth.enterOtp')}</p>
                         <input 
                             onChange={(e) => setOtp(e.target.value)} 
                             value={otp} 
-                            placeholder="Enter 6-digit OTP" 
+                            placeholder={t('auth.enterOtpPlaceholder')} 
                             className="border border-gray-200 rounded w-full p-2 mt-1 outline-green-500 text-center text-lg tracking-widest" 
                             type="text" 
                             maxLength="6"
@@ -302,14 +319,14 @@ const Login = () => {
                             disabled={resendLoading}
                             className="border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition-all w-full py-2 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {resendLoading ? 'Sending...' : 'Resend OTP'}
+                            {resendLoading ? t('auth.sending') : t('auth.resendOtp')}
                         </button>
                         <button 
                             type="submit"
                             disabled={otpLoading || otp.length !== 6}
                             className="bg-green-600 hover:bg-green-700 transition-all text-white w-full py-2 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {otpLoading ? 'Verifying...' : 'Verify OTP'}
+                            {otpLoading ? t('auth.verifying') : t('auth.verifyOtp')}
                         </button>
                     </div>
                     <button 
@@ -317,7 +334,7 @@ const Login = () => {
                         onClick={() => setShowOtpVerification(false)}
                         className="text-gray-500 text-sm mx-auto hover:text-gray-700 transition-colors"
                     >
-                        Back to {state}
+                        {t('auth.backTo')} {state}
                     </button>
                 </form>
 
@@ -374,12 +391,12 @@ const Login = () => {
                 </button>
 
                 <p className="text-2xl font-medium m-auto">
-                    <span className="text-green-600">{state === "login" ? "Sign In" : "Sign Up"}</span>
+                    <span className="text-green-600">{state === "login" ? t('auth.signIn') : t('auth.signUp')}</span>
                 </p>
                 
                 {/* Role Selection */}
                 <div className="w-full">
-                    <p className="mb-1 font-medium">Select Role *</p>
+                    <p className="mb-1 font-medium">{t('auth.selectRole')} *</p>
                     <select 
                         onChange={(e) => setRole(e.target.value)} 
                         value={role} 
@@ -405,11 +422,11 @@ const Login = () => {
                 {state === "register" && (
                     <>
                         <div className="w-full">
-                            <p>Full Name *</p>
+                            <p>{t('auth.fullName')} *</p>
                             <input 
                                 onChange={(e) => setName(e.target.value)} 
                                 value={name} 
-                                placeholder="Enter your full name" 
+                                placeholder={t('auth.enterFullName')} 
                                 className="border border-gray-200 rounded w-full p-2 mt-1 outline-green-500 transition-colors focus:border-green-500" 
                                 type="text" 
                                 required 
@@ -417,37 +434,56 @@ const Login = () => {
                             />
                         </div>
                         <div className="w-full">
-                            <p>Username *</p>
+                            <p>{t('auth.username')} *</p>
                             <input 
                                 onChange={(e) => setUsername(e.target.value)} 
                                 value={username} 
-                                placeholder="Enter a unique username" 
+                                placeholder={t('auth.enterUsername')} 
                                 className="border border-gray-200 rounded w-full p-2 mt-1 outline-green-500 transition-colors focus:border-green-500" 
                                 type="text" 
                                 required 
                             />
                         </div>
                         <div className="w-full">
-                            <p>Email *</p>
+                            <p>{t('auth.email')} *</p>
                             <input 
                                 onChange={(e) => setEmail(e.target.value)} 
                                 value={email} 
-                                placeholder="Enter your email" 
+                                placeholder={t('auth.enterEmail')} 
                                 className="border border-gray-200 rounded w-full p-2 mt-1 outline-green-500 transition-colors focus:border-green-500" 
                                 type="email" 
                                 required 
                             />
                         </div>
+                        
+                        {/* Shift Selection - Only for Employee Role */}
+                        {role === 'employee' && (
+                            <div className="w-full">
+                                <p>{t('auth.selectShift')} *</p>
+                                <select 
+                                    onChange={(e) => setShift(e.target.value)} 
+                                    value={shift} 
+                                    className="border border-gray-200 rounded w-full p-2 mt-1 outline-green-500 bg-white transition-colors focus:border-green-500"
+                                    required
+                                >
+                                    <option value="morning">Morning (9 AM - 2 PM)</option>
+                                    <option value="afternoon">Afternoon (3 PM - 8 PM)</option>
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Select your preferred work shift. Admin will add salary details later.
+                                </p>
+                            </div>
+                        )}
                     </>
                 )}
                 
                 {state === "login" && (
                     <div className="w-full">
-                        <p>Email / Username / Name *</p>
+                        <p>{t('auth.emailUsernameName')} *</p>
                         <input 
                             onChange={(e) => setLoginIdentifier(e.target.value)} 
                             value={loginIdentifier} 
-                            placeholder="Enter your email, username, or name" 
+                            placeholder={t('auth.enterEmailUsernameName')} 
                             className="border border-gray-200 rounded w-full p-2 mt-1 outline-green-500 transition-colors focus:border-green-500" 
                             type="text" 
                             required 
@@ -456,28 +492,39 @@ const Login = () => {
                     </div>
                 )}
                 <div className="w-full ">
-                    <p>Password *</p>
+                    <p>{t('auth.password')} *</p>
                     <input 
                         onChange={(e) => setPassword(e.target.value)} 
                         value={password} 
-                        placeholder="Enter password" 
+                        placeholder={t('auth.enterPassword')} 
                         className="border border-gray-200 rounded w-full p-2 mt-1 outline-green-500 transition-colors focus:border-green-500" 
                         type="password" 
-                        minLength="8"
+                        minLength="4"
                         required 
                     />
+                    {state === "login" && (
+                        <div className="text-right mt-1">
+                            <button
+                                type="button"
+                                onClick={() => setShowForgotPassword(true)}
+                                className="text-green-600 hover:underline text-sm"
+                            >
+                                Forgot Password?
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {state === "register" ? (
                     <p className="text-sm">
-                        Already have account? <span onClick={() => setState("login")} className="text-green-600 cursor-pointer underline hover:text-green-700 transition-colors">click here</span>
+                        {t('auth.alreadyHaveAccount')} <span onClick={() => setState("login")} className="text-green-600 cursor-pointer underline hover:text-green-700 transition-colors">{t('auth.clickHere')}</span>
                     </p>
                 ) : (
                     <p className="text-sm">
-                        Don't have an account? <span onClick={() => setState("register")} className="text-green-600 cursor-pointer underline hover:text-green-700 transition-colors">Sign Up</span>
+                        {t('auth.dontHaveAccount')} <span onClick={() => setState("register")} className="text-green-600 cursor-pointer underline hover:text-green-700 transition-colors">{t('auth.signUp')}</span>
                     </p>
                 )}
-                <p className="text-xs text-center text-blue-600 cursor-pointer hover:underline">Forgot Password?</p>
+                <p className="text-xs text-center text-blue-600 cursor-pointer hover:underline">{t('auth.forgotPassword')}</p>
                 <button 
                     type="submit"
                     disabled={loading}
@@ -486,10 +533,10 @@ const Login = () => {
                     {loading ? (
                         <span className="flex items-center justify-center gap-2">
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            {state === "register" ? "Sending OTP..." : "Logging in..."}
+                            {state === "register" ? t('auth.sendingOtp') : t('auth.loggingIn')}
                         </span>
                     ) : (
-                        state === "register" ? "Send OTP" : "Sign In"
+                        state === "register" ? t('auth.sendOtp') : t('auth.signIn')
                     )}
                 </button>
                 
@@ -500,6 +547,16 @@ const Login = () => {
                     </div>
                 )}
             </form>
+
+            {/* Forgot Password Modal */}
+            {showForgotPassword && (
+                <ForgotPassword
+                    onClose={() => setShowForgotPassword(false)}
+                    onSuccess={() => {
+                        toast.success('You can now login with your new password');
+                    }}
+                />
+            )}
         </div>
     )
 }

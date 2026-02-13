@@ -27,7 +27,7 @@ const bookingSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true },
     ownerEarnings: { type: Number, required: true }, // Amount owner gets
     platformEarnings: { type: Number, default: 0 }, // Platform commission
-    commissionRate: { type: Number, default: 0 }, // Commission percentage applied
+    commissionRate: { type: Number, default: 60 }, // Platform commission percentage (60% to platform, 40% to owner)
     paymentMethod: { 
       type: String, 
       enum: ["cash", "online"], 
@@ -54,6 +54,49 @@ const bookingSchema = new mongoose.Schema(
     originalCarId: { type: ObjectId, ref: "Car" },
     replacementReason: { type: String },
     replacedAt: { type: Date },
+    // Insurance fields
+    insurance: {
+      selected: { type: Boolean, default: false },
+      type: { 
+        type: String, 
+        enum: ["basic", "comprehensive", "premium"],
+        default: null
+      },
+      cost: { type: Number, default: 0 },
+      coverage: { type: Number, default: 0 }, // Coverage amount
+      provider: { type: String, default: "RentX Insurance" }
+    },
+    // GPS Tracking fields
+    gpsTracking: {
+      enabled: { type: Boolean, default: false },
+      deviceId: { type: String },
+      currentLocation: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        address: { type: String },
+        lastUpdated: { type: Date }
+      },
+      trackingHistory: [{
+        latitude: { type: Number },
+        longitude: { type: Number },
+        timestamp: { type: Date },
+        speed: { type: Number }, // km/h
+        address: { type: String }
+      }],
+      startLocation: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        address: { type: String },
+        timestamp: { type: Date }
+      },
+      endLocation: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        address: { type: String },
+        timestamp: { type: Date }
+      },
+      totalDistanceTraveled: { type: Number, default: 0 } // in km
+    },
   },
   { timestamps: true }
 );

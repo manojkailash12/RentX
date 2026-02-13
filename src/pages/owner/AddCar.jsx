@@ -4,6 +4,7 @@ import { assets } from '../../assets/assets'
 import { useAppContext } from '../../context/AppContext'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import BackButton from '../../components/BackButton'
 
 const AddCar = () => {
 
@@ -165,11 +166,11 @@ const AddCar = () => {
 
   const getSubtitle = () => {
     if (isAdmin) return 'Add cars to the platform inventory. Admin cars are automatically approved and available for booking.';
-    return 'Submit your car for approval. Once approved by admin, you\'ll earn 60% commission on each booking.';
+    return 'Submit your car for approval. Once approved by admin, you\'ll earn 40% commission on each booking.';
   }
 
   return (
-    <div className='min-h-full bg-gradient-to-b from-sky-400 via-blue-300 to-yellow-200 overflow-auto relative'>
+    <div className='min-h-screen bg-gradient-to-b from-sky-400 via-blue-300 to-yellow-200 overflow-y-auto relative'>
       {/* Animated clouds */}
       <div className="absolute top-10 left-10 w-24 h-12 bg-white rounded-full opacity-80 animate-float"></div>
       <div className="absolute top-20 right-20 w-32 h-14 bg-white rounded-full opacity-70 animate-float-delayed"></div>
@@ -188,8 +189,11 @@ const AddCar = () => {
       </div>
 
       {/* Content container - centered with padding for mountains */}
-      <div className="relative z-10 min-h-full flex items-center justify-center p-3 md:p-4 pb-64">
+      <div className="relative z-10 min-h-screen flex items-start justify-center p-3 md:p-4 pb-72 pt-8">
         <div className="w-full max-w-6xl my-8">
+          <div className="mb-4">
+            <BackButton />
+          </div>
           <div className="mb-2">
             <Title title={getTitle()} subTitle={getSubtitle()} />
           </div>
@@ -201,11 +205,6 @@ const AddCar = () => {
             }`}>
               {isAdmin ? 'Admin - Auto Approved' : 'User - Requires Approval'}
             </span>
-            {!isAdmin && (
-              <p className="text-xs text-gray-600 mt-1">
-                💡 Your car will be reviewed by admin before being available for booking. You'll earn 60% commission on each booking.
-              </p>
-            )}
           </div>
 
           <form onSubmit={onSubmitHandler} className='bg-white p-4 rounded-lg shadow-lg border border-gray-200'>

@@ -3,14 +3,27 @@ import { useAppContext } from '../../context/AppContext'
 import Title from '../../components/owner/Title'
 import toast from 'react-hot-toast'
 import { assets } from '../../assets/assets'
+import BackButton from '../../components/BackButton'
 
 const CarApproval = () => {
-  const { axios, isAdmin } = useAppContext()
+  const { axios, isEmployee } = useAppContext()
   const [pendingCars, setPendingCars] = useState([])
+  const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 })
   const [loading, setLoading] = useState(false)
   const [selectedCar, setSelectedCar] = useState(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const [showRejectModal, setShowRejectModal] = useState(false)
+
+  const fetchStats = async () => {
+    try {
+      const { data } = await axios.get('/owner/car-approval-stats')
+      if (data.success) {
+        setStats(data.stats)
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+    }
+  }
 
   const fetchPendingCars = async () => {
     try {
@@ -28,6 +41,11 @@ const CarApproval = () => {
     }
   }
 
+  const refreshData = () => {
+    fetchPendingCars()
+    fetchStats()
+  }
+
   const handleApprove = async (carId) => {
     try {
       const { data } = await axios.post('/owner/approve-reject-car', {
@@ -37,7 +55,7 @@ const CarApproval = () => {
       
       if (data.success) {
         toast.success(data.message)
-        fetchPendingCars() // Refresh the list
+        refreshData() // Refresh the list and stats
       } else {
         toast.error(data.message)
       }
@@ -64,7 +82,7 @@ const CarApproval = () => {
         setShowRejectModal(false)
         setSelectedCar(null)
         setRejectionReason('')
-        fetchPendingCars() // Refresh the list
+        refreshData() // Refresh the list and stats
       } else {
         toast.error(data.message)
       }
@@ -74,17 +92,18 @@ const CarApproval = () => {
   }
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isEmployee) {
       fetchPendingCars()
+      fetchStats()
     }
-  }, [isAdmin])
+  }, [isEmployee])
 
-  if (!isAdmin) {
+  if (!isEmployee) {
     return (
       <div className='px-4 pt-10 md:px-10 flex-1'>
         <div className='text-center py-20'>
           <h2 className='text-2xl font-semibold text-gray-600'>Access Denied</h2>
-          <p className='text-gray-500 mt-2'>This page is only accessible to administrators.</p>
+          <p className='text-gray-500 mt-2'>This page is only accessible to employees.</p>
         </div>
       </div>
     )
@@ -92,10 +111,33 @@ const CarApproval = () => {
 
   return (
     <div className='px-4 pt-10 md:px-10 flex-1'>
+      <div className="mb-4">
+        <BackButton />
+      </div>
       <Title 
         title='Car Approval Management' 
         subTitle='Review and approve user-submitted vehicles for the platform' 
       />
+
+      {/* Statistics Cards */}
+      <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mt-6'>
+        <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+          <p className='text-sm text-blue-600 font-medium'>Total Cars</p>
+          <p className='text-2xl font-bold text-blue-700 mt-1'>{stats.total}</p>
+        </div>
+        <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-4'>
+          <p className='text-sm text-yellow-600 font-medium'>Pending</p>
+          <p className='text-2xl font-bold text-yellow-700 mt-1'>{stats.pending}</p>
+        </div>
+        <div className='bg-green-50 border border-green-200 rounded-lg p-4'>
+          <p className='text-sm text-green-600 font-medium'>Approved</p>
+          <p className='text-2xl font-bold text-green-700 mt-1'>{stats.approved}</p>
+        </div>
+        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+          <p className='text-sm text-red-600 font-medium'>Rejected</p>
+          <p className='text-2xl font-bold text-red-700 mt-1'>{stats.rejected}</p>
+        </div>
+      </div>
 
       {loading ? (
         <div className='flex justify-center items-center py-20'>

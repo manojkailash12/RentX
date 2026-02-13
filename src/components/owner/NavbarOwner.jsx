@@ -41,12 +41,13 @@ const NavbarOwner = () => {
             action: () => navigate('/owner/dashboard'),
             description: 'View your earnings'
         },
-        { 
+        // Hide "My Bookings" for admin role - employees handle this
+        ...(!isAdmin ? [{
             label: 'My Bookings', 
             icon: '📋', 
             action: () => navigate('/owner/manage-bookings'),
             description: 'Manage bookings'
-        },
+        }] : []),
         { 
             label: 'My Cars', 
             icon: '🚗', 

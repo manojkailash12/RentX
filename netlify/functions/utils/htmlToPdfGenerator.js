@@ -3,13 +3,16 @@ const PDFDocument = require('pdfkit');
 /**
  * Simple HTML to PDF converter using PDFKit
  * Works on both local and Netlify environments
+ * Fixed to avoid font file loading issues
  */
 const generatePdfFromHtml = async (htmlContent) => {
   return new Promise((resolve, reject) => {
     try {
+      // Create PDF without specifying fonts to avoid file system issues
       const doc = new PDFDocument({ 
         size: 'A4',
-        margin: 40
+        margin: 40,
+        autoFirstPage: true
       });
       
       const chunks = [];
@@ -34,21 +37,28 @@ const generatePdfFromHtml = async (htmlContent) => {
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/₹/g, 'Rs.')
+        .replace(/🚗/g, '')
         .replace(/\n\s*\n\s*\n/g, '\n\n');
       
       const lines = textContent.split('\n');
       
+      // Don't call font() method to avoid font file loading
       lines.forEach((line, index) => {
         line = line.trim();
         if (!line) return;
         
-        if (line.length < 50 && (index === 0 || lines[index-1].trim() === '')) {
-          doc.fontSize(14).fillColor('#059669').text(line, { continued: false });
-          doc.moveDown(0.5);
-        } else if (line.includes('|')) {
-          doc.fontSize(9).fillColor('#000').text(line, { continued: false });
-        } else {
-          doc.fontSize(10).fillColor('#000').text(line, { continued: false });
+        try {
+          if (line.length < 50 && (index === 0 || lines[index-1].trim() === '')) {
+            doc.fontSize(14).fillColor('#f97316').text(line, { continued: false });
+            doc.moveDown(0.5);
+          } else if (line.includes('|')) {
+            doc.fontSize(9).fillColor('#000').text(line, { continued: false });
+          } else {
+            doc.fontSize(10).fillColor('#000').text(line, { continued: false });
+          }
+        } catch (err) {
+          // Skip lines that cause errors
+          console.warn('Skipping line due to error:', err.message);
         }
       });
       

@@ -3,6 +3,8 @@ import Title from '../../components/owner/Title'
 import { useAppContext } from '../../context/AppContext'
 import toast from 'react-hot-toast';
 import { assets } from '../../assets/assets';
+import GPSTracker from '../../components/GPS/GPSTracker';
+import BackButton from '../../components/BackButton';
 
 const ManageBookings = () => {
 
@@ -18,6 +20,8 @@ const ManageBookings = () => {
   const [selectedNewCar, setSelectedNewCar] = useState('')
   const [replacementReason, setReplacementReason] = useState('')
   const [replaceLoading, setReplaceLoading] = useState(false)
+  const [showGPSModal, setShowGPSModal] = useState(false)
+  const [gpsBookingId, setGpsBookingId] = useState(null)
 
   const fetchOwnerBookings = async () => {
     try {
@@ -175,13 +179,30 @@ const ManageBookings = () => {
   }
 
   // Export function
-  const handleExportExcel = async () => {
+  const handleExportExcel = async (e) => {
+    e.stopPropagation(); // Prevent event bubbling
     setExportLoading(true);
     try {
       await downloadFile('/admin/bookings/export/excel', `bookings-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success('Bookings Excel exported successfully!');
     } catch (error) {
       console.error('Excel export error:', error);
       toast.error('Failed to export Excel');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // Export PDF function
+  const handleExportPDF = async (e) => {
+    e.stopPropagation(); // Prevent event bubbling
+    setExportLoading(true);
+    try {
+      await downloadFile('/admin/bookings/export/pdf', `bookings-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('Bookings PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast.error('Failed to export PDF');
     } finally {
       setExportLoading(false);
     }
@@ -206,22 +227,39 @@ const ManageBookings = () => {
 
   return (
     <div className='h-full flex flex-col p-4 md:p-6 bg-gray-50 overflow-auto'>
+      <div className="mb-4">
+        <BackButton />
+      </div>
       <div className="flex justify-between items-start mb-4">
         <Title title={getTitle()} subTitle={getSubtitle()} />
-        {/* Export button for admin */}
+        {/* Export buttons for admin */}
         {isAdmin && (
-          <button 
-            onClick={handleExportExcel}
-            disabled={exportLoading}
-            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
-          >
-            {exportLoading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              '📊'
-            )}
-            Excel
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleExportPDF}
+              disabled={exportLoading}
+              className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+            >
+              {exportLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                '📄'
+              )}
+              PDF
+            </button>
+            <button 
+              onClick={handleExportExcel}
+              disabled={exportLoading}
+              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+            >
+              {exportLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                '📊'
+              )}
+              Excel
+            </button>
+          </div>
         )}
       </div>
 
@@ -404,6 +442,19 @@ const ManageBookings = () => {
                               </button>
                             )}
 
+                            {booking.status === 'confirmed' && (
+                              <button
+                                onClick={() => {
+                                  setGpsBookingId(booking._id);
+                                  setShowGPSModal(true);
+                                }}
+                                className='px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs hover:bg-purple-200 transition-colors'
+                                title='View GPS Tracking'
+                              >
+                                📍 GPS
+                              </button>
+                            )}
+
                             {booking.paymentMethod === 'cash' && booking.paymentStatus !== 'paid' && booking.paymentStatus !== 'completed' && (
                               <button
                                 onClick={() => updatePaymentStatus(booking._id, 'paid')}
@@ -560,6 +611,29 @@ const ManageBookings = () => {
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GPS Tracking Modal */}
+      {showGPSModal && gpsBookingId && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'>
+          <div className='bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto'>
+            <div className='sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center'>
+              <h2 className='text-xl font-semibold'>GPS Tracking</h2>
+              <button
+                onClick={() => {
+                  setShowGPSModal(false);
+                  setGpsBookingId(null);
+                }}
+                className='text-gray-500 hover:text-gray-700 text-2xl'
+              >
+                &times;
+              </button>
+            </div>
+            <div className='p-6'>
+              <GPSTracker bookingId={gpsBookingId} />
             </div>
           </div>
         </div>

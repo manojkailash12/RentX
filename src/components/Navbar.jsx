@@ -2,12 +2,16 @@ import React, { useState, useRef, useEffect } from "react";
 import { assets, menuLinks } from "../assets/assets";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
+import { useChatContext } from "../context/ChatContext";
 import toast from "react-hot-toast";
-import {motion} from 'motion/react'
+import {motion} from 'motion/react';
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useTranslation } from 'react-i18next';
 
 const Navbar = () => {
-
-  const {setShowLogin, setLoginMode, user, logout, isOwner, isAdmin, axios, setIsOwner} = useAppContext();
+  const { t } = useTranslation();
+  const {setShowLogin, setLoginMode, user, logout, isOwner, isAdmin, isEmployee, axios, setIsOwner} = useAppContext();
+  const { totalUnreadCount } = useChatContext();
 
     const location = useLocation()
     const [open, setOpen] = useState(false)
@@ -85,18 +89,29 @@ const Navbar = () => {
             action: () => navigate('/owner/dashboard'),
             description: 'View your earnings'
         },
-        { 
-            label: 'Bookings', 
-            icon: '📋', 
-            action: () => navigate('/my-bookings'),
-            description: 'View your bookings'
-        },
+        // Hide "My Bookings" for admin role
+        ...(!isAdmin ? [
+            { 
+                label: 'Bookings', 
+                icon: '📋', 
+                action: () => navigate('/my-bookings'),
+                description: 'View your bookings'
+            }
+        ] : []),
         { 
             label: 'Cars', 
             icon: '🚗', 
             action: () => navigate('/owner/manage-cars'),
             description: 'Manage your cars'
         },
+        ...(isEmployee ? [
+            {
+                label: 'Dashboard',
+                icon: '👔',
+                action: () => navigate('/owner/dashboard'),
+                description: 'View your dashboard'
+            }
+        ] : []),
         { 
             label: 'View Profile', 
             icon: '👤', 
@@ -130,12 +145,31 @@ const Navbar = () => {
         ))}
 
         <div className="flex max-sm:flex-col items-start sm:items-center gap-6">
+            <LanguageSwitcher />
+            
+            {user && (
+              <Link to="/chat" className="relative">
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
+                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  {totalUnreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                      {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+                    </span>
+                  )}
+                </button>
+              </Link>
+            )}
+            
             {user && (
               <div className="flex items-center gap-2">
                 <span className={`px-2 py-1 text-xs rounded-full ${
-                  isAdmin ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                  isAdmin ? 'bg-red-100 text-red-700' : 
+                  isEmployee ? 'bg-purple-100 text-purple-700' :
+                  'bg-blue-100 text-blue-700'
                 }`}>
-                  {isAdmin ? 'Admin' : 'User'}
+                  {isAdmin ? 'Admin' : isEmployee ? 'Employee' : 'User'}
                 </span>
               </div>
             )}
@@ -160,7 +194,7 @@ const Navbar = () => {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                Logout
+                {t('nav.logout')}
               </button>
             )}
             
@@ -242,7 +276,7 @@ const Navbar = () => {
                   }} 
                   className="cursor-pointer px-6 py-2 border border-primary text-primary hover:bg-primary hover:text-white transition-all rounded-lg"
                 >
-                  Register
+                  {t('nav.register')}
                 </button>
                 <button 
                   onClick={() => {
@@ -251,7 +285,7 @@ const Navbar = () => {
                   }} 
                   className="cursor-pointer px-8 py-2 bg-primary hover:bg-primary-dull transition-all text-white rounded-lg"
                 >
-                  Login
+                  {t('nav.login')}
                 </button>
               </div>
             )}

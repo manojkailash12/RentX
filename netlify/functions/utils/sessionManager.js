@@ -39,9 +39,9 @@ const verifySession = async (sessionToken) => {
             return null;
         }
         
-        // Add timeout to prevent hanging
+        // Add timeout to prevent hanging - INCREASED timeout
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Session verification timeout')), 5000);
+            setTimeout(() => reject(new Error('Session verification timeout')), 10000); // Increased to 10s
         });
         
         // Find active session that hasn't expired
@@ -50,7 +50,7 @@ const verifySession = async (sessionToken) => {
             isActive: true,
             expiresAt: { $gt: new Date() }
         })
-        .maxTimeMS(5000) // MongoDB query timeout
+        .maxTimeMS(10000) // MongoDB query timeout - increased to 10s
         .populate('userId');
         
         const session = await Promise.race([sessionPromise, timeoutPromise]);

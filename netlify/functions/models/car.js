@@ -23,12 +23,28 @@ const carSchema = new mongoose.Schema({
     location: {type: String, required: true},
     description: {type: String, required: true},
     isAvailable: {type: Boolean, default: true},
-    isApproved: {type: Boolean, default: false}, // Admin approval status
+    isApproved: {type: Boolean, default: true}, // Auto-approve all cars (changed from false)
     approvedBy: {type: ObjectId, ref: "User"}, // Admin who approved
     approvedAt: {type: Date},
     rejectionReason: {type: String}, // Reason if rejected
-    commissionRate: {type: Number, default: 40}, // Commission percentage for user-owned cars
-    ownerType: {type: String, enum: ['admin', 'user'], required: true} // Who owns the car
+    commissionRate: {type: Number, default: 60}, // Platform commission percentage (60% to platform, 40% to owner)
+    ownerType: {type: String, enum: ['admin', 'user', 'employee'], required: true}, // Who owns the car
+    addedBy: {type: ObjectId, ref: "User"}, // Employee who added the car (for admin cars)
+    // Rating cache fields
+    averageRating: { 
+        type: Number, 
+        default: 0,
+        min: 0,
+        max: 5
+    },
+    totalReviews: { 
+        type: Number, 
+        default: 0,
+        min: 0
+    },
+    lastRatingUpdate: { 
+        type: Date 
+    }
 },{timestamps: true})
 
 // Add indexes for better query performance
@@ -38,6 +54,7 @@ carSchema.index({ category: 1 }); // For category filtering
 carSchema.index({ location: 1 }); // For location-based searches
 carSchema.index({ pricePerDay: 1 }); // For price sorting
 carSchema.index({ createdAt: -1 }); // For recent cars
+carSchema.index({ averageRating: -1 }); // Sort by rating
 
 const Car = mongoose.models.Car || mongoose.model('Car', carSchema)
 
