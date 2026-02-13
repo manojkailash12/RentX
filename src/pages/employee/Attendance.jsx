@@ -25,6 +25,16 @@ const Attendance = () => {
       setTodayStatus(data);
     } catch (error) {
       console.error('Error fetching today status:', error);
+      toast.error('Failed to fetch attendance status');
+      // Set default state to allow check-in
+      setTodayStatus({
+        canCheckIn: true,
+        canCheckOut: false,
+        hasCheckedIn: false,
+        hasCheckedOut: false,
+        today: new Date(),
+        attendance: null
+      });
     }
   }, [backendUrl, token, userData._id]);
 
@@ -213,7 +223,15 @@ const Attendance = () => {
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3 justify-center">
-          {todayStatus?.canCheckIn && (
+          {/* Show error message if API failed */}
+          {!todayStatus && (
+            <div className="text-red-600 font-medium text-center w-full mb-4">
+              Unable to load attendance status. Please refresh the page.
+            </div>
+          )}
+          
+          {/* Always show check-in button if not checked in */}
+          {(todayStatus?.canCheckIn || (!todayStatus?.hasCheckedIn && !todayStatus?.attendance?.checkIn)) && (
             <button
               onClick={handleCheckIn}
               disabled={checkingIn}
