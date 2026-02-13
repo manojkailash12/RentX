@@ -53,7 +53,7 @@ import UserChatInterface from "./components/Chat/UserChatInterface";
 import BookingConfirmation from "./pages/BookingConfirmation";
 
 const App = () => {
-  const {showLogin, loginMode, token}= useAppContext()
+  const {showLogin, loginMode, token, isAdmin, isEmployee}= useAppContext()
   const location = useLocation();
   const navigate = useNavigate();
   const isOwnerPath = location.pathname.startsWith("/owner");
@@ -71,6 +71,27 @@ const App = () => {
       }
     }
   }, [token]); 
+
+  // Protected Route Component for My Bookings
+  const ProtectedMyBookings = () => {
+    if (isAdmin || isEmployee) {
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-gray-800 mb-4">Access Denied</h1>
+            <p className="text-gray-600 mb-4">This page is not available for {isAdmin ? 'admin' : 'employee'} accounts</p>
+            <button
+              onClick={() => navigate('/')}
+              className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-dull transition-colors"
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return <MyBookings />;
+  }; 
 
   return (
     <ChatProvider>
@@ -108,7 +129,7 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/car-details/:id" element={<CarDetails />} />
             <Route path="/cars" element={<Cars />} />
-            <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/my-bookings" element={<ProtectedMyBookings />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/features" element={<Features />} />
             <Route path="/booking-confirmation" element={<BookingConfirmation />} />

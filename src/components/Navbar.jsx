@@ -45,8 +45,8 @@ const Navbar = () => {
 
     // Get menu links based on user role
     const getMenuLinks = () => {
-      if (isAdmin) {
-        // Admin sees Home and Cars only (no My Bookings)
+      if (isAdmin || isEmployee) {
+        // Admin and Employee see Home and Cars only (no My Bookings)
         return [
           { name: "Home", path: "/" },
           { name: "Cars", path: "/cars" }
@@ -89,8 +89,8 @@ const Navbar = () => {
             action: () => navigate('/owner/dashboard'),
             description: 'View your earnings'
         },
-        // Hide "My Bookings" for admin role
-        ...(!isAdmin ? [
+        // Hide "My Bookings" for admin and employee roles
+        ...(!isAdmin && !isEmployee ? [
             { 
                 label: 'Bookings', 
                 icon: '📋', 
