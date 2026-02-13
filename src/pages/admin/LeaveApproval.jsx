@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../../context/AppContext';
 import BackButton from '../../components/BackButton';
 
 const LeaveApproval = () => {
-  const { backendUrl, token, userData } = useAppContext();
+  const { axios, token, userData } = useAppContext();
   
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,16 +20,14 @@ const LeaveApproval = () => {
   const fetchLeaveRequests = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`${backendUrl}/leave/all`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.get('/leave/all');
       
       if (data.success) {
         setLeaveRequests(data.leaves || []);
       }
     } catch (error) {
       console.error('Error fetching leave requests:', error);
-      toast.error('Failed to fetch leave requests');
+      toast.error(error.response?.data?.message || 'Failed to fetch leave requests');
     } finally {
       setLoading(false);
     }
@@ -44,14 +41,12 @@ const LeaveApproval = () => {
 
     setActionLoading(true);
     try {
-      const { data } = await axios.put(
-        `${backendUrl}/leave/${leaveId}/status`,
+      const { data } = await axios.post(
+        `/leave/${leaveId}/review`,
         {
-          status,
-          comments: comments.trim(),
-          reviewerId: userData._id
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+          action: status === 'Approved' ? 'approve' : 'reject',
+          rejectionReason: comments.trim()
+        }
       );
 
       if (data.success) {

@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../../components/BackButton';
 
 const LeaveManagement = () => {
-  const { backendUrl, token, userData } = useAppContext();
+  const { axios, token, userData } = useAppContext();
   const navigate = useNavigate();
   
   const [leaveRequests, setLeaveRequests] = useState([]);
@@ -20,16 +19,14 @@ const LeaveManagement = () => {
   const fetchLeaveRequests = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`${backendUrl}/leave/my-requests`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.get('/leave/my-requests');
       
       if (data.success) {
         setLeaveRequests(data.leaves || []);
       }
     } catch (error) {
       console.error('Error fetching leave requests:', error);
-      toast.error('Failed to fetch leave requests');
+      toast.error(error.response?.data?.message || 'Failed to fetch leave requests');
     } finally {
       setLoading(false);
     }
