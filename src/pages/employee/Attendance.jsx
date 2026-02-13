@@ -17,6 +17,11 @@ const Attendance = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const fetchTodayStatus = useCallback(async () => {
+    if (!userData?._id || !token) {
+      console.log('Missing userData or token, skipping fetch');
+      return;
+    }
+    
     try {
       const { data } = await axios.get(
         `/employee-attendance/today/${userData._id}`,
@@ -25,30 +30,37 @@ const Attendance = () => {
       setTodayStatus(data);
     } catch (error) {
       console.error('Error fetching today status:', error);
-      console.error('Error details:', error.response?.data);
       
-      // More specific error messages
-      if (error.response?.status === 404) {
-        toast.error('Employee record not found. Please contact admin.');
-      } else if (error.response?.status === 500) {
-        toast.error('Server error. Please try again later.');
-      } else {
-        toast.error(error.response?.data?.message || 'Failed to fetch attendance status');
+      // Only show toast on first load, not on refresh
+      if (!todayStatus) {
+        if (error.response?.status === 404) {
+          toast.error('Employee record not found. Please contact admin.');
+        } else if (error.response?.status === 500) {
+          toast.error('Server error. Please try again later.');
+        } else if (error.code === 'ERR_NETWORK') {
+          toast.error('Network error. Please check your connection.');
+        }
       }
       
-      // Set default state to allow check-in
+      // Set default state to allow check-in even on error
       setTodayStatus({
         canCheckIn: true,
         canCheckOut: false,
         hasCheckedIn: false,
         hasCheckedOut: false,
         today: new Date(),
-        attendance: null
+        attendance: null,
+        employee: null
       });
     }
-  }, [token, userData._id]);
+  }, [token, userData?._id, todayStatus]);
 
   const fetchAttendanceHistory = useCallback(async () => {
+    if (!userData?._id || !token) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       const { data } = await axios.get(
         `/employee-attendance/history/${userData._id}`,
@@ -61,24 +73,29 @@ const Attendance = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching attendance history:', error);
+      // Don't show error toast for history - just set empty array
       setAttendanceHistory([]);
       setLoading(false);
     }
-  }, [token, userData._id, selectedMonth, selectedYear]);
+  }, [token, userData?._id, selectedMonth, selectedYear]);
 
   useEffect(() => {
-    if (userData?._id) {
-      Promise.all([fetchTodayStatus(), fetchAttendanceHistory()]);
+    if (userData?._id && token) {
+      setLoading(true);
+      Promise.all([fetchTodayStatus(), fetchAttendanceHistory()])
+        .finally(() => setLoading(false));
     }
-  }, [userData, selectedMonth, selectedYear, fetchTodayStatus, fetchAttendanceHistory]);
+  }, [userData?._id, token, selectedMonth, selectedYear]);
 
   useEffect(() => {
-    if (!userData?._id) return;
+    if (!userData?._id || !token) return;
+    
     const interval = setInterval(() => {
       fetchTodayStatus();
     }, 30000);
+    
     return () => clearInterval(interval);
-  }, [userData?._id, fetchTodayStatus]);
+  }, [userData?._id, token, fetchTodayStatus]);
 
   const handleCheckIn = async () => {
     setCheckingIn(true);
@@ -130,7 +147,13 @@ const Attendance = () => {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return 'N/A';
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      // Display in IST timezone with 12-hour format
+      return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Kolkata'
+      });
     } catch (error) {
       return 'N/A';
     }
@@ -148,8 +171,10 @@ const Attendance = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="ml-4">Loading attendance data...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading attendance data...</p>
+        </div>
       </div>
     );
   }
@@ -158,8 +183,14 @@ const Attendance = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
-          <p className="text-red-600 text-lg">No user data found</p>
-          <p className="text-gray-600">Please log in again</p>
+          <p className="text-red-600 text-lg mb-2">No user data found</p>
+          <p className="text-gray-600 mb-4">Please log in again</p>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-dull transition-colors"
+          >
+            Go to Home
+          </button>
         </div>
       </div>
     );

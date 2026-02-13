@@ -184,8 +184,11 @@ const employeeCheckIn = async (req, res) => {
       attendance = await Attendance.findById(attendance._id).populate('userId', 'name email');
     }
 
+    // Format time in IST (or user's timezone)
+    const localTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    
     res.status(201).json({
-      message: `Successfully checked in at ${now.toLocaleTimeString()}`,
+      message: `Successfully checked in at ${localTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`,
       attendance,
       status,
       isLate,
@@ -314,8 +317,11 @@ const employeeCheckOut = async (req, res) => {
       { new: true }
     ).populate('userId', 'name email');
 
+    // Format time in IST (or user's timezone)
+    const localTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    
     res.json({
-      message: `Successfully checked out at ${now.toLocaleTimeString()}`,
+      message: `Successfully checked out at ${localTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`,
       attendance: updatedAttendance,
       workDuration: { hours, minutes },
       status: finalStatus,
