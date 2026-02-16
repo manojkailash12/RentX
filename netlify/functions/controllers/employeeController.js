@@ -730,9 +730,12 @@ exports.getPayroll = async (req, res) => {
     if (!isAdmin) {
       const employee = await Employee.findOne({ userId });
       if (!employee) {
-        return res.status(404).json({
-          success: false,
-          message: 'Employee record not found'
+        // Employee record doesn't exist yet, return empty array
+        return res.json({
+          success: true,
+          payroll: [],
+          count: 0,
+          message: 'No employee record found. Please contact admin to set up your employee profile.'
         });
       }
       filter.employeeId = employee._id;

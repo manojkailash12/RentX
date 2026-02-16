@@ -24,9 +24,15 @@ const Payroll = () => {
       });
       if (data.success) {
         setPayrollRecords(data.payroll);
+        if (data.message) {
+          toast.info(data.message);
+        }
+      } else {
+        toast.error(data.message || 'Failed to fetch payroll records');
       }
     } catch (error) {
-      toast.error('Failed to fetch payroll records');
+      console.error('Payroll fetch error:', error);
+      toast.error(error.response?.data?.message || 'Failed to fetch payroll records');
     } finally {
       setLoading(false);
     }

@@ -19,18 +19,24 @@ const UsersPage = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      console.log('Fetching users from:', `${backendUrl}/admin/users`);
       const { data } = await axios.get(`${backendUrl}/admin/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('Users API response:', data);
       if (data.success) {
         // Filter out deleted and pending deletion users
         const activeUsers = data.users.filter(u => 
           u.accountStatus === 'active'
         );
         setUsers(activeUsers);
+      } else {
+        toast.error(data.message || 'Failed to fetch users');
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to fetch users');
+      console.error('Users fetch error:', error);
+      console.error('Error response:', error.response);
+      toast.error(error.response?.data?.message || error.message || 'Failed to fetch users');
     } finally {
       setLoading(false);
     }
@@ -39,6 +45,7 @@ const UsersPage = () => {
   const exportPDF = async () => {
     try {
       setExportingPDF(true);
+      console.log('Exporting PDF from:', `${backendUrl}/employees/users/export/pdf`);
       const response = await axios.get(`${backendUrl}/employees/users/export/pdf`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
@@ -53,7 +60,8 @@ const UsersPage = () => {
       link.remove();
       toast.success('PDF exported successfully');
     } catch (error) {
-      toast.error('Failed to export PDF');
+      console.error('PDF export error:', error);
+      toast.error(error.response?.data?.message || error.message || 'Failed to export PDF');
     } finally {
       setExportingPDF(false);
     }
@@ -62,6 +70,7 @@ const UsersPage = () => {
   const exportExcel = async () => {
     try {
       setExportingExcel(true);
+      console.log('Exporting Excel from:', `${backendUrl}/employees/users/export/excel`);
       const response = await axios.get(`${backendUrl}/employees/users/export/excel`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
@@ -76,7 +85,8 @@ const UsersPage = () => {
       link.remove();
       toast.success('Excel exported successfully');
     } catch (error) {
-      toast.error('Failed to export Excel');
+      console.error('Excel export error:', error);
+      toast.error(error.response?.data?.message || error.message || 'Failed to export Excel');
     } finally {
       setExportingExcel(false);
     }
