@@ -674,7 +674,12 @@ app.get('/admin/cars/export/pdf', protect, requireDB, isAdmin, exportCarsPDF);
 app.get('/admin/cars/export/excel', protect, requireDB, isAdmin, exportCarsExcel);
 app.get('/admin/bookings/export/pdf', protect, requireDB, isAdmin, exportBookingsPDF);
 app.get('/admin/bookings/export/excel', protect, requireDB, isAdmin, exportBookingsExcel);
-app.get('/admin/users', protect, requireDB, isEmployeeOrAdmin, getAllUsers);
+app.get('/admin/users', (req, res, next) => {
+  console.log('🔍 [ADMIN] GET /admin/users called');
+  console.log('   User:', req.user);
+  console.log('   Headers:', req.headers.authorization);
+  next();
+}, protect, requireDB, isEmployeeOrAdmin, getAllUsers);
 app.get('/admin/get-admins', protect, requireDB, getAdminUsers); // Accessible by all authenticated users
 app.get('/admin/bookings', protect, requireDB, isEmployee, getAllBookings);
 app.post('/admin/replace-car', protect, requireDB, isEmployee, replaceCarInBooking);
@@ -873,13 +878,22 @@ app.post('/leave/:leaveId/review', protect, requireDB, isEmployeeOrAdmin, review
 
 // Payroll Routes (Employee can view their own, Admin can view all)
 app.post('/payroll/generate', protect, requireDB, isAdmin, generatePayroll);
-app.get('/payroll', protect, requireDB, isEmployeeOrAdmin, getPayroll);
+app.get('/payroll', (req, res, next) => {
+  console.log('🔍 [PAYROLL] GET /payroll called');
+  console.log('   User:', req.user);
+  console.log('   Headers:', req.headers.authorization);
+  next();
+}, protect, requireDB, isEmployeeOrAdmin, getPayroll);
 app.post('/payroll/:payrollId/pay', protect, requireDB, isAdmin, paySalary);
 app.post('/payroll/:payrollId/email', protect, requireDB, isAdmin, generateAndEmailPayslip);
 app.get('/payroll/:payrollId/download', protect, requireDB, isEmployeeOrAdmin, downloadPayslip);
 
 // Employee Users Export Routes (Admin can also access)
-app.get('/employees/users/export/pdf', protect, requireDB, isEmployeeOrAdmin, exportUsersPDF);
+app.get('/employees/users/export/pdf', (req, res, next) => {
+  console.log('🔍 [USERS] GET /employees/users/export/pdf called');
+  console.log('   User:', req.user);
+  next();
+}, protect, requireDB, isEmployeeOrAdmin, exportUsersPDF);
 app.get('/employees/users/export/excel', protect, requireDB, isEmployeeOrAdmin, exportUsersExcel);
 
 // ========== NEW FEATURES ROUTES ==========
