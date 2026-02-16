@@ -831,7 +831,6 @@ exports.exportUsersPDF = async (req, res) => {
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=users-${new Date().toISOString().split('T')[0]}.pdf`);
-    res.setHeader('Content-Length', doc.length);
     
     doc.pipe(res);
     
