@@ -825,7 +825,9 @@ exports.exportUsersPDF = async (req, res) => {
     const doc = new PDFDocument({ 
       margin: 50,
       bufferPages: true,
-      autoFirstPage: true
+      autoFirstPage: true,
+      size: 'A4',
+      layout: 'landscape'
     });
     
     // Set response headers
@@ -840,39 +842,42 @@ exports.exportUsersPDF = async (req, res) => {
     doc.fontSize(12).text(`Generated on: ${new Date().toLocaleDateString()}`, { align: 'center' });
     doc.moveDown(2);
     
-    // Table headers
+    // Table headers - wider columns for landscape
     const tableTop = 150;
     const col1 = 50;
-    const col2 = 150;
-    const col3 = 280;
-    const col4 = 380;
-    const col5 = 450;
+    const col2 = 180;
+    const col3 = 380;
+    const col4 = 520;
+    const col5 = 620;
+    const col6 = 720;
     
-    doc.fontSize(10);
+    doc.fontSize(10).font('Helvetica-Bold');
     doc.text('Name', col1, tableTop);
     doc.text('Email', col2, tableTop);
     doc.text('Phone', col3, tableTop);
     doc.text('Role', col4, tableTop);
     doc.text('Status', col5, tableTop);
+    doc.text('Joined', col6, tableTop);
     
     // Draw line
-    doc.moveTo(col1, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+    doc.moveTo(col1, tableTop + 15).lineTo(790, tableTop + 15).stroke();
     
     // Table data
-    doc.fontSize(9);
+    doc.fontSize(9).font('Helvetica');
     let y = tableTop + 25;
     
-    users.forEach((user, index) => {
-      if (y > 700) {
+    users.forEach((user) => {
+      if (y > 500) {
         doc.addPage();
         y = 50;
       }
       
-      doc.text(user.name || 'N/A', col1, y, { width: 90, ellipsis: true });
-      doc.text(user.email || 'N/A', col2, y, { width: 120, ellipsis: true });
-      doc.text(user.phone || 'N/A', col3, y, { width: 90 });
-      doc.text(user.role || 'user', col4, y, { width: 60 });
-      doc.text(user.isVerified ? 'Verified' : 'Pending', col5, y, { width: 60 });
+      doc.text(user.name || 'N/A', col1, y, { width: 120, ellipsis: true });
+      doc.text(user.email || 'N/A', col2, y, { width: 190, ellipsis: true });
+      doc.text(user.phone || 'N/A', col3, y, { width: 130 });
+      doc.text(user.role || 'user', col4, y, { width: 90 });
+      doc.text(user.isVerified ? 'Verified' : 'Pending', col5, y, { width: 90 });
+      doc.text(new Date(user.createdAt).toLocaleDateString(), col6, y, { width: 70 });
       
       y += 20;
     });
@@ -925,10 +930,10 @@ exports.exportUsersExcel = async (req, res) => {
     headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
     headerRow.height = 25;
     
-    // Set column widths
+    // Set column widths - increased email width for printing
     worksheet.columns = [
       { key: 'name', width: 25 },
-      { key: 'email', width: 30 },
+      { key: 'email', width: 40 },
       { key: 'phone', width: 15 },
       { key: 'role', width: 12 },
       { key: 'status', width: 12 },
@@ -946,10 +951,13 @@ exports.exportUsersExcel = async (req, res) => {
         new Date(user.createdAt).toLocaleDateString()
       ]);
       
-      dataRow.alignment = { horizontal: 'center', vertical: 'middle' };
+      dataRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       dataRow.border = {
         bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } }
       };
+      
+      // Set specific alignment for email column (left align for better readability)
+      dataRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
     });
     
     // Add summary row
