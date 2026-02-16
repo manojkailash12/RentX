@@ -184,12 +184,6 @@ const Sidebar = () => {
                 icon: assets.users_icon,
                 coloredIcon: assets.users_icon
             });
-            menuLinks.push({
-                name: 'Deleted Accounts',
-                path: "/owner/deleted-accounts",
-                icon: assets.users_icon,
-                coloredIcon: assets.users_icon
-            });
         }
         
         // Add admin-specific menu items

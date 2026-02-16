@@ -882,11 +882,6 @@ app.get('/payroll/:payrollId/download', protect, requireDB, isEmployeeOrAdmin, d
 app.get('/employees/users/export/pdf', protect, requireDB, isEmployeeOrAdmin, exportUsersPDF);
 app.get('/employees/users/export/excel', protect, requireDB, isEmployeeOrAdmin, exportUsersExcel);
 
-// Employee Deleted Users Routes (Admin can also access)
-app.get('/employees/deleted-users', protect, requireDB, isEmployeeOrAdmin, getDeletedUsers);
-app.get('/employees/deleted-users/export/pdf', protect, requireDB, isEmployeeOrAdmin, exportDeletedUsersPDF);
-app.get('/employees/deleted-users/export/excel', protect, requireDB, isEmployeeOrAdmin, exportDeletedUsersExcel);
-
 // ========== NEW FEATURES ROUTES ==========
 
 // Biometric Attendance Routes

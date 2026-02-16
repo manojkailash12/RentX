@@ -30,7 +30,6 @@ import Payroll from "./pages/employee/Payroll";
 import LeaveRequest from "./pages/employee/LeaveRequest";
 import LeaveManagement from "./pages/employee/LeaveManagement";
 import UsersPage from "./pages/employee/UsersPage";
-import DeletedAccountsPage from "./pages/employee/DeletedAccountsPage";
 import BiometricDevices from "./pages/admin/BiometricDevices";
 import ShiftScheduling from "./pages/admin/ShiftScheduling";
 import DynamicPricing from "./pages/admin/DynamicPricing";
@@ -158,7 +157,6 @@ const App = () => {
               <Route path="employees" element={<EmployeeManagementPage />} />
               <Route path="employee-deletion-requests" element={<EmployeeDeletionRequests />} />
               <Route path="users" element={<UsersPage />} />
-              <Route path="deleted-accounts" element={<DeletedAccountsPage />} />
               <Route path="leave-approval" element={<LeaveApproval />} />
               <Route path="biometric-devices" element={<BiometricDevices />} />
               <Route path="shift-scheduling" element={<ShiftScheduling />} />

@@ -15,6 +15,11 @@ The API routes had incorrect role-based access control middleware:
 
 ### 1. API Routes Fixed (`netlify/functions/api.js`)
 
+#### Removed Deleted Users Routes:
+- Completely removed `/employees/deleted-users` endpoint
+- Removed `/employees/deleted-users/export/pdf` endpoint
+- Removed `/employees/deleted-users/export/excel` endpoint
+
 #### Before:
 ```javascript
 // Employee Users Export Routes
@@ -66,8 +71,7 @@ app.get('/payroll/:payrollId/download', protect, requireDB, isEmployeeOrAdmin, d
 | Download Own Payslip | ✅ Yes | ✅ Yes |
 | Download Any Payslip | ❌ No | ✅ Yes |
 | Export Users PDF/Excel | ✅ Yes | ✅ Yes |
-| View Deleted Users | ✅ Yes | ✅ Yes |
-| Export Deleted Users | ✅ Yes | ✅ Yes |
+| View Users List | ✅ Yes | ✅ Yes |
 | Generate Payroll | ❌ No | ✅ Yes |
 | Pay Salary | ❌ No | ✅ Yes |
 
@@ -79,8 +83,6 @@ app.get('/payroll/:payrollId/download', protect, requireDB, isEmployeeOrAdmin, d
 - [ ] Can download their own payslips
 - [ ] Can access `/owner/users` page
 - [ ] Can export users to PDF/Excel
-- [ ] Can access `/owner/deleted-accounts` page
-- [ ] Can export deleted accounts to PDF/Excel
 
 ### For Admin Role:
 - [ ] Can access all employee features above
@@ -98,8 +100,11 @@ app.get('/payroll/:payrollId/download', protect, requireDB, isEmployeeOrAdmin, d
 
 ## Files Modified
 
-1. `rentx-netlify/netlify/functions/api.js` - Updated route middleware
+1. `rentx-netlify/netlify/functions/api.js` - Updated route middleware, removed deleted users routes
 2. `rentx-netlify/netlify/functions/controllers/employeeController.js` - Added role-based logic
+3. `rentx-netlify/src/App.jsx` - Removed deleted accounts route
+4. `rentx-netlify/src/components/owner/Sidebar.jsx` - Removed deleted accounts menu link
+5. `rentx-netlify/src/pages/employee/DeletedAccountsPage.jsx` - **DELETED**
 
 ## How to Deploy
 
@@ -134,9 +139,7 @@ After deployment, test with both employee and admin accounts:
    - Click on "Payroll" tab
    - Verify you can see all payroll records
    - Navigate to `/owner/users`
-   - Verify you can see all users
-   - Navigate to `/owner/deleted-accounts`
-   - Verify you can see deleted accounts
+   - Verify you can see all users and can export them
 
 ## Support
 
