@@ -2,6 +2,9 @@ const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
 pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
 
+// Centralized locale configuration
+const CURRENCY_LOCALE = 'en-IN';
+
 /**
  * Generate Analytics Report PDF using pdfmake
  */
@@ -42,7 +45,7 @@ const generateAnalyticsPDF = async (analyticsData) => {
           body: [
             [
               { text: 'Total Revenue', style: 'tableCell' },
-              { text: `Rs.${(analyticsData.totalRevenue || 0).toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right', bold: true }
+              { text: `Rs.${(analyticsData.totalRevenue || 0).toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right', bold: true }
             ],
             [
               { text: 'Total Bookings', style: 'tableCell' },
@@ -58,15 +61,15 @@ const generateAnalyticsPDF = async (analyticsData) => {
             ],
             [
               { text: 'Platform Earnings', style: 'tableCell' },
-              { text: `Rs.${(analyticsData.platformEarnings || 0).toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right', bold: true }
+              { text: `Rs.${(analyticsData.platformEarnings || 0).toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right', bold: true }
             ],
             [
               { text: 'Cash Earnings', style: 'tableCell' },
-              { text: `Rs.${(analyticsData.cashEarnings || 0).toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right', bold: true }
+              { text: `Rs.${(analyticsData.cashEarnings || 0).toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right', bold: true }
             ],
             [
               { text: 'Online Earnings', style: 'tableCell' },
-              { text: `Rs.${(analyticsData.onlineEarnings || 0).toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right', bold: true }
+              { text: `Rs.${(analyticsData.onlineEarnings || 0).toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right', bold: true }
             ]
           ]
         },
@@ -144,7 +147,7 @@ const generateAnalyticsPDF = async (analyticsData) => {
             ...(analyticsData.topCars || []).slice(0, 10).map(car => [
               { text: `${car.brand} ${car.model} (${car.year})`, style: 'tableCell', fontSize: 8 },
               { text: car.bookingCount.toString(), style: 'tableCell', alignment: 'center' },
-              { text: `Rs.${(car.totalRevenue || 0).toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right', fontSize: 8 },
+              { text: `Rs.${(car.totalRevenue || 0).toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right', fontSize: 8 },
               { text: car.averageRating ? car.averageRating.toFixed(1) : 'N/A', style: 'tableCell', alignment: 'center' }
             ])
           ]
@@ -187,7 +190,7 @@ const generateAnalyticsPDF = async (analyticsData) => {
               { text: owner.owner?.name || 'N/A', style: 'tableCell', fontSize: 8 },
               { text: `${owner.totalCars} (${owner.approvedCars})`, style: 'tableCell', alignment: 'center', fontSize: 8 },
               { text: owner.totalBookings.toString(), style: 'tableCell', alignment: 'center' },
-              { text: `Rs.${(owner.totalEarnings || 0).toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right', fontSize: 8 }
+              { text: `Rs.${(owner.totalEarnings || 0).toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right', fontSize: 8 }
             ])
           ]
         },
@@ -228,7 +231,7 @@ const generateAnalyticsPDF = async (analyticsData) => {
               { text: loc.location, style: 'tableCell' },
               { text: loc.bookings.toString(), style: 'tableCell', alignment: 'center' },
               { text: loc.cars.toString(), style: 'tableCell', alignment: 'center' },
-              { text: `Rs.${(loc.revenue || 0).toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right', fontSize: 8 }
+              { text: `Rs.${(loc.revenue || 0).toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right', fontSize: 8 }
             ])
           ]
         },

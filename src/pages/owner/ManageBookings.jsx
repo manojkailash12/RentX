@@ -8,7 +8,7 @@ import BackButton from '../../components/BackButton';
 
 const ManageBookings = () => {
 
-  const { currency, axios, isAdmin, downloadFile, getImageUrl } = useAppContext();
+  const { currency, currencyLocale, axios, isAdmin, downloadFile, getImageUrl } = useAppContext();
 
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(false)
@@ -331,7 +331,7 @@ const ManageBookings = () => {
                                     {booking.bookingId || `#${index + 1}`}
                                   </p>
                                   <p className='text-xs text-gray-400'>
-                                    {new Date(booking.pickupDate).toLocaleDateString('en-IN')} - {new Date(booking.returnDate).toLocaleDateString('en-IN')} ({days} days)
+                                    {new Date(booking.pickupDate).toLocaleDateString(currencyLocale)} - {new Date(booking.returnDate).toLocaleDateString(currencyLocale)} ({days} days)
                                   </p>
                                 </div>
                               </>
@@ -364,10 +364,10 @@ const ManageBookings = () => {
 
                         <td className='p-3'>
                           <div>
-                            <p className='font-medium'>₹{(booking.totalAmount || booking.price || 0).toLocaleString('en-IN')}</p>
+                            <p className='font-medium'>₹{(booking.totalAmount || booking.price || 0).toLocaleString(currencyLocale)}</p>
                             {booking.ownerEarnings && (
                               <p className='text-xs text-green-600'>
-                                Your earnings: ₹{booking.ownerEarnings.toLocaleString('en-IN')}
+                                Your earnings: ₹{booking.ownerEarnings.toLocaleString(currencyLocale)}
                               </p>
                             )}
                             {booking.commissionRate > 0 && (
@@ -500,7 +500,7 @@ const ManageBookings = () => {
                 ₹{bookings
                   .filter(b => ['confirmed', 'completed'].includes(b.status))
                   .reduce((sum, b) => sum + (b.ownerEarnings || b.totalAmount || b.price || 0), 0)
-                  .toLocaleString('en-IN')}
+                  .toLocaleString(currencyLocale)}
               </p>
             </div>
           </div>

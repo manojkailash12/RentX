@@ -11,7 +11,7 @@ import BackButton from '../components/BackButton';
 
 const MyBookings = () => {
   const { t } = useTranslation();
-  const { axios, user, currency, getImageUrl } = useAppContext()
+  const { axios, user, currency, currencyLocale, getImageUrl } = useAppContext()
 
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(false)
@@ -391,7 +391,7 @@ const MyBookings = () => {
                       <img src={assets.calendar_icon_colored} alt="" className='w-4 h-4 mt-1' />
                       <div>
                         <p className='text-gray-500'>{t('bookings.rentalPeriod')} ({days} {t('bookings.days')})</p>
-                        <p>{new Date(booking.pickupDate).toLocaleDateString('en-IN')} to {new Date(booking.returnDate).toLocaleDateString('en-IN')}</p>
+                        <p>{new Date(booking.pickupDate).toLocaleDateString(currencyLocale)} to {new Date(booking.returnDate).toLocaleDateString(currencyLocale)}</p>
                       </div>
                     </div>
 
@@ -427,12 +427,12 @@ const MyBookings = () => {
                     <div className='text-sm text-gray-500 text-right'>
                       <p>{t('bookings.totalAmount')}</p>
                       <h1 className='text-2xl font-semibold text-primary'>
-                        ₹{(booking.totalAmount || booking.price || 0).toLocaleString('en-IN')}
+                        ₹{(booking.totalAmount || booking.price || 0).toLocaleString(currencyLocale)}
                       </h1>
-                      <p className='text-xs'>{t('bookings.bookedOn')} {new Date(booking.createdAt).toLocaleDateString('en-IN')}</p>
+                      <p className='text-xs'>{t('bookings.bookedOn')} {new Date(booking.createdAt).toLocaleDateString(currencyLocale)}</p>
                       {booking.pricePerDay && (
                         <p className='text-xs text-gray-400 mt-1'>
-                          ₹{booking.pricePerDay.toLocaleString('en-IN')}/day × {days} {t('bookings.days')}
+                          ₹{booking.pricePerDay.toLocaleString(currencyLocale)}/day × {days} {t('bookings.days')}
                         </p>
                       )}
                     </div>
@@ -563,7 +563,7 @@ const MyBookings = () => {
                 </div>
                 <div className='flex justify-between md:block'>
                   <span className='text-gray-600'>Booked On:</span> 
-                  <span className='font-medium ml-2 md:ml-0 md:block'>{new Date(selectedBooking.createdAt).toLocaleDateString('en-IN')}</span>
+                  <span className='font-medium ml-2 md:ml-0 md:block'>{new Date(selectedBooking.createdAt).toLocaleDateString(currencyLocale)}</span>
                 </div>
               </div>
             </div>
@@ -590,7 +590,7 @@ const MyBookings = () => {
                       </div>
                       {selectedBooking.replacedAt && (
                         <p className='text-xs text-yellow-600 mt-2'>
-                          Replaced on: {new Date(selectedBooking.replacedAt).toLocaleString('en-IN')}
+                          Replaced on: {new Date(selectedBooking.replacedAt).toLocaleString(currencyLocale)}
                         </p>
                       )}
                     </div>
@@ -647,11 +647,11 @@ const MyBookings = () => {
               <div className='space-y-4 text-sm'>
                 <div className='flex justify-between'>
                   <span className='text-gray-600'>Pickup:</span> 
-                  <span className='font-medium text-right'>{selectedBooking.pickupLocation} ({new Date(selectedBooking.pickupDate).toLocaleString('en-IN')})</span>
+                  <span className='font-medium text-right'>{selectedBooking.pickupLocation} ({new Date(selectedBooking.pickupDate).toLocaleString(currencyLocale)})</span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-gray-600'>Drop-off:</span> 
-                  <span className='font-medium text-right'>{selectedBooking.dropLocation} ({new Date(selectedBooking.returnDate).toLocaleString('en-IN')})</span>
+                  <span className='font-medium text-right'>{selectedBooking.dropLocation} ({new Date(selectedBooking.returnDate).toLocaleString(currencyLocale)})</span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-gray-600'>Duration:</span> 
@@ -675,7 +675,7 @@ const MyBookings = () => {
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
                 <div className='flex justify-between md:block'>
                   <span className='text-gray-600'>Total Amount:</span> 
-                  <span className='font-medium text-lg text-primary ml-2 md:ml-0 md:block'>₹{(selectedBooking.totalAmount || selectedBooking.price).toLocaleString('en-IN')}</span>
+                  <span className='font-medium text-lg text-primary ml-2 md:ml-0 md:block'>₹{(selectedBooking.totalAmount || selectedBooking.price).toLocaleString(currencyLocale)}</span>
                 </div>
                 <div className='flex justify-between md:block'>
                   <span className='text-gray-600'>Payment Method:</span> 
@@ -688,7 +688,7 @@ const MyBookings = () => {
                 {selectedBooking.pricePerDay && (
                   <div className='flex justify-between md:block'>
                     <span className='text-gray-600'>Price/Day:</span> 
-                    <span className='font-medium ml-2 md:ml-0 md:block'>₹{selectedBooking.pricePerDay.toLocaleString('en-IN')}</span>
+                    <span className='font-medium ml-2 md:ml-0 md:block'>₹{selectedBooking.pricePerDay.toLocaleString(currencyLocale)}</span>
                   </div>
                 )}
               </div>
@@ -779,7 +779,7 @@ const MyBookings = () => {
                                     <div className='flex items-center gap-2 mb-2'>
                                       <span className='font-semibold text-gray-800'>Owner Response</span>
                                       <span className='text-xs text-gray-500'>
-                                        {new Date(review.ownerResponse.respondedAt).toLocaleDateString('en-IN')}
+                                        {new Date(review.ownerResponse.respondedAt).toLocaleDateString(currencyLocale)}
                                       </span>
                                     </div>
                                     <p className='text-gray-700 bg-blue-50 p-3 rounded-lg'>{review.ownerResponse.text}</p>

@@ -22,7 +22,8 @@ const generatePayslipPDF = async (payrollData, employeeData, userData) => {
       const lightGray = '#666666';
       
       // Helper to format currency
-      const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString('en-IN')}`;
+      const currencyLocale = 'en-IN'; // Centralized locale configuration
+      const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString(currencyLocale)}`;
       
       // Helper to get month name
       const getMonthName = (month) => {
@@ -209,7 +210,7 @@ const generatePayslipPDF = async (payrollData, employeeData, userData) => {
       if (payrollData.paidOn) {
         doc.fillColor(darkGray);
         doc.text('Paid On:', 320, yPos);
-        doc.text(new Date(payrollData.paidOn).toLocaleDateString('en-IN'), 430, yPos);
+        doc.text(new Date(payrollData.paidOn).toLocaleDateString(currencyLocale), 430, yPos);
       }
       
       // Footer

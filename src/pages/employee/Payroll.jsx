@@ -19,7 +19,7 @@ const Payroll = () => {
   const fetchPayrollRecords = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`${backendUrl}/payroll`, {
+      const { data } = await axios.get('/payroll', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (data.success) {
@@ -49,7 +49,7 @@ const Payroll = () => {
 
   const downloadPayslip = async (payrollId) => {
     try {
-      const response = await axios.get(`${backendUrl}/payroll/${payrollId}/download`, {
+      const response = await axios.get(`/payroll/${payrollId}/download`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });

@@ -2,6 +2,9 @@ const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
 pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
 
+// Centralized locale configuration
+const CURRENCY_LOCALE = 'en-IN';
+
 /**
  * Generate Earnings Report PDF using pdfmake
  * Works reliably in serverless environments
@@ -23,9 +26,9 @@ const generateEarningsReportPDF = async (year, monthlyData, totalYearlyEarnings,
   monthlyData.forEach(month => {
     tableBody.push([
       { text: month.monthName, style: 'tableCell' },
-      { text: `Rs.${month.totalEarnings.toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right' },
-      { text: `Rs.${month.cashEarnings.toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right' },
-      { text: `Rs.${month.onlineEarnings.toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right' },
+      { text: `Rs.${month.totalEarnings.toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right' },
+      { text: `Rs.${month.cashEarnings.toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right' },
+      { text: `Rs.${month.onlineEarnings.toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right' },
       { text: month.bookings.toString(), style: 'tableCell', alignment: 'center' }
     ]);
   });
@@ -86,7 +89,7 @@ const generateEarningsReportPDF = async (year, monthlyData, totalYearlyEarnings,
             {
               stack: [
                 { text: 'Yearly Summary', style: 'summaryTitle', alignment: 'center' },
-                { text: `Total Earnings: Rs.${totalYearlyEarnings.toLocaleString('en-IN')}`, style: 'summaryText', alignment: 'center', margin: [0, 10, 0, 5] },
+                { text: `Total Earnings: Rs.${totalYearlyEarnings.toLocaleString(CURRENCY_LOCALE)}`, style: 'summaryText', alignment: 'center', margin: [0, 10, 0, 5] },
                 { text: `Total Bookings: ${totalYearlyBookings}`, style: 'summaryText', alignment: 'center' }
               ],
               fillColor: '#fff7ed',
@@ -346,7 +349,7 @@ const generateBookingsReportPDF = async (bookings) => {
       { text: car ? `${car.brand} ${car.model}` : 'N/A', style: 'tableCell' },
       { text: new Date(booking.pickupDate).toLocaleDateString(), style: 'tableCell', fontSize: 8 },
       { text: new Date(booking.returnDate).toLocaleDateString(), style: 'tableCell', fontSize: 8 },
-      { text: `Rs.${(booking.totalAmount || 0).toLocaleString('en-IN')}`, style: 'tableCell', alignment: 'right' },
+      { text: `Rs.${(booking.totalAmount || 0).toLocaleString(CURRENCY_LOCALE)}`, style: 'tableCell', alignment: 'right' },
       { text: booking.status, style: 'tableCell', alignment: 'center', fontSize: 8 }
     ]);
   });
@@ -385,7 +388,7 @@ const generateBookingsReportPDF = async (bookings) => {
             {
               columns: [
                 { text: `Total Bookings: ${bookings.length}`, style: 'summaryItem', width: '*' },
-                { text: `Total Revenue: Rs.${totalRevenue.toLocaleString('en-IN')}`, style: 'summaryItem', width: '*' },
+                { text: `Total Revenue: Rs.${totalRevenue.toLocaleString(CURRENCY_LOCALE)}`, style: 'summaryItem', width: '*' },
                 { text: `Confirmed: ${confirmedCount}`, style: 'summaryItem', width: 'auto' },
                 { text: `Completed: ${completedCount}`, style: 'summaryItem', width: 'auto' },
                 { text: `Pending: ${pendingCount}`, style: 'summaryItem', width: 'auto' }

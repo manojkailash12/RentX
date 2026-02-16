@@ -15,7 +15,7 @@ import InsuranceSelector from "../components/Insurance/InsuranceSelector";
 const CarDetails = () => {
   const { t } = useTranslation();
   const { id } = useParams();
-  const { cars, axios, user, isAdmin, getImageUrl } = useAppContext()
+  const { cars, axios, user, isAdmin, currencyLocale, getImageUrl } = useAppContext()
   const navigate = useNavigate();
   const [car, setCar] = useState(null);
   const [pickupLocation, setPickupLocation] = useState('');
@@ -436,7 +436,7 @@ const CarDetails = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-400 mb-1">{t('carDetails.pricing')}</h3>
                 <p className="text-2xl text-gray-800 font-semibold">
-                  Rs. {car.pricePerDay.toLocaleString('en-IN')} 
+                  Rs. {car.pricePerDay.toLocaleString(currencyLocale)} 
                   <span className="text-base text-gray-400 font-normal"> {t('carDetails.perDay')}</span>
                 </p>
               </div>
@@ -538,7 +538,7 @@ const CarDetails = () => {
             <p className="text-xl text-gray-800 font-semibold">
               {pricingType === 'daily' ? (
                 <>
-                  Rs. {car.pricePerDay.toLocaleString('en-IN')} 
+                  Rs. {car.pricePerDay.toLocaleString(currencyLocale)} 
                   <span className="text-sm text-gray-400 font-normal"> {t('carDetails.perDay')}</span>
                 </>
               ) : (
@@ -769,7 +769,7 @@ const CarDetails = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>{t('carDetails.pricePerDay')}</span>
-                    <span>Rs. {car.pricePerDay.toLocaleString('en-IN')}</span>
+                    <span>Rs. {car.pricePerDay.toLocaleString(currencyLocale)}</span>
                   </div>
                 </>
               ) : (
@@ -787,7 +787,7 @@ const CarDetails = () => {
               <hr className="my-1" />
               <div className="flex justify-between font-semibold text-sm">
                 <span>{t('carDetails.totalAmount')}</span>
-                <span>Rs. {getTotalAmount().toLocaleString('en-IN')}</span>
+                <span>Rs. {getTotalAmount().toLocaleString(currencyLocale)}</span>
               </div>
             </div>
           )}

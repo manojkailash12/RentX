@@ -11,7 +11,8 @@ const generatePayslipPDF = async (payrollData, employeeData, userData) => {
   const darkGray = '#333333';
   const lightGray = '#666666';
   
-  const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString('en-IN')}`;
+  const currencyLocale = 'en-IN'; // Centralized locale configuration
+  const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString(currencyLocale)}`;
   
   const getMonthName = (month) => {
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 
@@ -257,7 +258,7 @@ const generatePayslipPDF = async (payrollData, employeeData, userData) => {
             ],
             ...(payrollData.paidOn ? [[
               { text: 'Paid On:', fontSize: 10, bold: true, border: [false, false, false, false] },
-              { text: new Date(payrollData.paidOn).toLocaleDateString('en-IN'), fontSize: 10, border: [false, false, false, false] }
+              { text: new Date(payrollData.paidOn).toLocaleDateString(currencyLocale), fontSize: 10, border: [false, false, false, false] }
             ]] : [])
           ]
         },

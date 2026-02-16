@@ -7,6 +7,9 @@ const { generateEarningsReportPDF, generateCarsReportPDF, generateBookingsReport
 const { sendCarReplacementEmail } = require('../utils/emailService.js');
 const { deleteUserAccount } = require('../utils/accountDeletion');
 
+// Centralized locale configuration
+const CURRENCY_LOCALE = 'en-IN';
+
 // Admin middleware to check if user is admin
 const isAdmin = (req, res, next) => {
   if (req.user.role !== 'admin') {
@@ -70,11 +73,11 @@ const getDashboardAnalytics = async (req, res) => {
         totalBookings,
         availableCars,
         pendingApprovalCars,
-        monthlyEarnings: `₹${monthlyEarnings.toLocaleString('en-IN')}`,
-        platformEarnings: `₹${platformEarnings.toLocaleString('en-IN')}`,
-        ownerEarnings: `₹${ownerEarnings.toLocaleString('en-IN')}`,
-        cashEarnings: `₹${cashEarnings.toLocaleString('en-IN')}`,
-        onlineEarnings: `₹${onlineEarnings.toLocaleString('en-IN')}`,
+        monthlyEarnings: `₹${monthlyEarnings.toLocaleString(CURRENCY_LOCALE)}`,
+        platformEarnings: `₹${platformEarnings.toLocaleString(CURRENCY_LOCALE)}`,
+        ownerEarnings: `₹${ownerEarnings.toLocaleString(CURRENCY_LOCALE)}`,
+        cashEarnings: `₹${cashEarnings.toLocaleString(CURRENCY_LOCALE)}`,
+        onlineEarnings: `₹${onlineEarnings.toLocaleString(CURRENCY_LOCALE)}`,
         recentBookings
       }
     });
@@ -263,9 +266,9 @@ const exportEarningsExcel = async (req, res) => {
       
       const dataRow = worksheet.addRow([
         monthName,
-        `₹${totalEarnings.toLocaleString('en-IN')}`,
-        `₹${cashEarnings.toLocaleString('en-IN')}`,
-        `₹${onlineEarnings.toLocaleString('en-IN')}`,
+        `₹${totalEarnings.toLocaleString(CURRENCY_LOCALE)}`,
+        `₹${cashEarnings.toLocaleString(CURRENCY_LOCALE)}`,
+        `₹${onlineEarnings.toLocaleString(CURRENCY_LOCALE)}`,
         bookings.length
       ]);
       
@@ -279,7 +282,7 @@ const exportEarningsExcel = async (req, res) => {
     worksheet.addRow([]);
     const summaryRow = worksheet.addRow([
       'TOTAL',
-      `₹${totalYearlyEarnings.toLocaleString('en-IN')}`,
+      `₹${totalYearlyEarnings.toLocaleString(CURRENCY_LOCALE)}`,
       '',
       '',
       totalYearlyBookings
@@ -587,7 +590,7 @@ const exportBookingsExcel = async (req, res) => {
         car ? `${car.brand} ${car.model}` : 'N/A',
         new Date(booking.pickupDate).toLocaleDateString(),
         new Date(booking.returnDate).toLocaleDateString(),
-        `₹${(booking.totalAmount || 0).toLocaleString('en-IN')}`,
+        `₹${(booking.totalAmount || 0).toLocaleString(CURRENCY_LOCALE)}`,
         booking.status,
         booking.paymentStatus || 'pending',
         new Date(booking.createdAt).toLocaleDateString()
@@ -605,7 +608,7 @@ const exportBookingsExcel = async (req, res) => {
     const summaryRow = worksheet.addRow([
       'SUMMARY',
       `Total Bookings: ${bookings.length}`,
-      `Total Revenue: ₹${totalRevenue.toLocaleString('en-IN')}`,
+      `Total Revenue: ₹${totalRevenue.toLocaleString(CURRENCY_LOCALE)}`,
       `Confirmed: ${bookings.filter(b => b.status === 'confirmed').length}`,
       `Completed: ${bookings.filter(b => b.status === 'completed').length}`
     ]);

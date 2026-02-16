@@ -19,8 +19,8 @@ const UsersPage = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      console.log('Fetching users from:', `${backendUrl}/admin/users`);
-      const { data } = await axios.get(`${backendUrl}/admin/users`, {
+      console.log('Fetching users from:', '/admin/users');
+      const { data } = await axios.get('/admin/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('Users API response:', data);
@@ -45,8 +45,8 @@ const UsersPage = () => {
   const exportPDF = async () => {
     try {
       setExportingPDF(true);
-      console.log('Exporting PDF from:', `${backendUrl}/employees/users/export/pdf`);
-      const response = await axios.get(`${backendUrl}/employees/users/export/pdf`, {
+      console.log('Exporting PDF from:', '/employees/users/export/pdf');
+      const response = await axios.get('/employees/users/export/pdf', {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -70,8 +70,8 @@ const UsersPage = () => {
   const exportExcel = async () => {
     try {
       setExportingExcel(true);
-      console.log('Exporting Excel from:', `${backendUrl}/employees/users/export/excel`);
-      const response = await axios.get(`${backendUrl}/employees/users/export/excel`, {
+      console.log('Exporting Excel from:', '/employees/users/export/excel');
+      const response = await axios.get('/employees/users/export/excel', {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });

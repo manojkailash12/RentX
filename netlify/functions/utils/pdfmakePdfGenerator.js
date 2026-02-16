@@ -16,7 +16,8 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
   const isPerkm = bookingDetails.pricingType === 'per_km';
   
   // Format currency
-  const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString('en-IN')}`;
+  const currencyLocale = 'en-IN'; // Centralized locale configuration
+  const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString(currencyLocale)}`;
   
   // Calculate duration - show precise hours and minutes
   const diffTime = Math.abs(dropOffDate - pickupDate);
@@ -75,7 +76,7 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
                 { text: 'RentX', fontSize: 18, bold: true, color: 'white', alignment: 'center', margin: [0, 0, 0, 2] },
                 { text: 'Booking Receipt', fontSize: 11, bold: true, color: 'white', alignment: 'center', margin: [0, 0, 0, 1] },
                 { 
-                  text: `${bookingDate.toLocaleDateString('en-IN')} ${bookingDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`, 
+                  text: `${bookingDate.toLocaleDateString(currencyLocale)} ${bookingDate.toLocaleTimeString(currencyLocale, { hour: '2-digit', minute: '2-digit' })}`, 
                   fontSize: 8, 
                   color: 'white', 
                   alignment: 'center'
@@ -326,7 +327,7 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
                 ],
                 [
                   { text: 'Pickup Date & Time', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
-                  { text: `${pickupDate.toLocaleDateString('en-IN')} ${pickupDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`, fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
+                  { text: `${pickupDate.toLocaleDateString(currencyLocale)} ${pickupDate.toLocaleTimeString(currencyLocale, { hour: '2-digit', minute: '2-digit' })}`, fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
                 ],
                 [
                   { text: 'Drop-off Location', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
@@ -338,7 +339,7 @@ const generateBookingInvoicePDF = async (bookingDetails) => {
                 ],
                 [
                   { text: 'Drop-off Date & Time', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] },
-                  { text: `${dropOffDate.toLocaleDateString('en-IN')} ${dropOffDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`, fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
+                  { text: `${dropOffDate.toLocaleDateString(currencyLocale)} ${dropOffDate.toLocaleTimeString(currencyLocale, { hour: '2-digit', minute: '2-digit' })}`, fontSize: 9, bold: true, color: '#111827', alignment: 'right', border: [false, false, false, true], borderColor: ['', '', '', '#f9fafb'] }
                 ],
                 [
                   { text: 'Duration', fontSize: 9, bold: true, color: '#6b7280', border: [false, false, false, bookingDetails.distance ? true : false], borderColor: ['', '', '', '#f9fafb'] },

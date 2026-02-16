@@ -8,7 +8,7 @@ import BackButton from '../../components/BackButton'
 
 const ManageCars = () => {
 
-  const { isOwner, axios, currency, isAdmin, isEmployee, downloadFile, getImageUrl } = useAppContext()
+  const { isOwner, axios, currency, currencyLocale, isAdmin, isEmployee, downloadFile, getImageUrl } = useAppContext()
   const navigate = useNavigate()
 
   const [cars, setCars] = useState([])
@@ -324,7 +324,7 @@ const ManageCars = () => {
                       <td className='p-3 max-md:hidden'>{car.category}</td>
                       <td className='p-3'>
                         <div>
-                          <p className='font-medium'>₹{car.pricePerDay?.toLocaleString('en-IN') || 0}/day</p>
+                          <p className='font-medium'>₹{car.pricePerDay?.toLocaleString(currencyLocale) || 0}/day</p>
                           {car.ownerType === 'user' && (
                             <p className='text-xs text-blue-600'>Commission: {car.commissionRate || 60}%</p>
                           )}

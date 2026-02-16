@@ -1,5 +1,8 @@
 const nodemailer = require('nodemailer');
 
+// Centralized locale configuration
+const CURRENCY_LOCALE = 'en-IN';
+
 // Create reusable transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
@@ -153,7 +156,7 @@ const sendBookingConfirmation = async (email, bookingDetails, pdfBuffer = null) 
       
       <div class="detail-row">
         <span class="label">Pickup Date:</span>
-        <span class="value">${pickupDate.toLocaleDateString('en-IN')} at ${pickupDate.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'})}</span>
+        <span class="value">${pickupDate.toLocaleDateString(CURRENCY_LOCALE)} at ${pickupDate.toLocaleTimeString(CURRENCY_LOCALE, {hour: '2-digit', minute: '2-digit'})}</span>
       </div>
       
       <div class="detail-row">
@@ -163,7 +166,7 @@ const sendBookingConfirmation = async (email, bookingDetails, pdfBuffer = null) 
       
       <div class="detail-row">
         <span class="label">Drop-off Date:</span>
-        <span class="value">${dropOffDate.toLocaleDateString('en-IN')} at ${dropOffDate.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'})}</span>
+        <span class="value">${dropOffDate.toLocaleDateString(CURRENCY_LOCALE)} at ${dropOffDate.toLocaleTimeString(CURRENCY_LOCALE, {hour: '2-digit', minute: '2-digit'})}</span>
       </div>
       
       ${bookingDetails.distance || bookingDetails.estimatedDistance ? `
@@ -189,7 +192,7 @@ const sendBookingConfirmation = async (email, bookingDetails, pdfBuffer = null) 
     </div>
     
     <div class="amount">
-      <h3 style="margin: 0; color: #c2410c; font-size: 24px;">💰 Total Amount: ₹${(bookingDetails.totalAmount || bookingDetails.totalPrice || bookingDetails.price || 0).toLocaleString('en-IN')}</h3>
+      <h3 style="margin: 0; color: #c2410c; font-size: 24px;">💰 Total Amount: ₹${(bookingDetails.totalAmount || bookingDetails.totalPrice || bookingDetails.price || 0).toLocaleString(CURRENCY_LOCALE)}</h3>
       <p style="margin: 5px 0; color: #9a3412; font-weight: 600;">
         ${(bookingDetails.paymentMethod === 'cash_on_delivery' || bookingDetails.paymentMethod === 'cash') ? 
           '💵 Pay at Drop-Off' : 
@@ -933,8 +936,8 @@ const sendCarReplacementEmail = async (email, replacementDetails) => {
       <p style="color: #c2410c;"><strong>📋 Booking Details:</strong></p>
       <ul style="margin: 10px 0; padding-left: 20px; color: #9a3412;">
         <li><strong>Booking ID:</strong> ${replacementDetails.bookingId}</li>
-        <li><strong>Pickup Date:</strong> ${new Date(replacementDetails.pickupDate).toLocaleDateString('en-IN')}</li>
-        <li><strong>Return Date:</strong> ${new Date(replacementDetails.returnDate).toLocaleDateString('en-IN')}</li>
+        <li><strong>Pickup Date:</strong> ${new Date(replacementDetails.pickupDate).toLocaleDateString(CURRENCY_LOCALE)}</li>
+        <li><strong>Return Date:</strong> ${new Date(replacementDetails.returnDate).toLocaleDateString(CURRENCY_LOCALE)}</li>
         <li><strong>Pickup Location:</strong> ${replacementDetails.pickupLocation}</li>
       </ul>
     </div>
@@ -1150,7 +1153,7 @@ const sendPayslipEmail = async (email, payrollData, employeeData, userData, pdfB
     return months[month - 1];
   };
 
-  const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString('en-IN')}`;
+  const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString(CURRENCY_LOCALE)}`;
 
   const htmlContent = `<!DOCTYPE html>
 <html>

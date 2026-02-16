@@ -30,7 +30,8 @@ const generateBookingInvoicePDFKit = async (bookingDetails) => {
       const bookingDate = new Date(bookingDetails.createdAt);
       
       const isPerkm = bookingDetails.pricingType === 'per_km';
-      const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString('en-IN')}`;
+      const currencyLocale = 'en-IN'; // Centralized locale configuration
+      const formatCurrency = (amount) => `Rs.${(amount || 0).toLocaleString(currencyLocale)}`;
       
       // Calculate duration
       const diffTime = Math.abs(dropOffDate - pickupDate);
@@ -40,8 +41,8 @@ const generateBookingInvoicePDFKit = async (bookingDetails) => {
       doc.fontSize(28).fillColor('#059669').text('RentX', { align: 'left' });
       doc.fontSize(14).fillColor('#6b7280').text('Booking Receipt', { align: 'left' });
       doc.moveUp(2);
-      doc.fontSize(10).fillColor('#000').text(bookingDate.toLocaleDateString('en-IN'), { align: 'right' });
-      doc.fontSize(9).fillColor('#6b7280').text(bookingDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), { align: 'right' });
+      doc.fontSize(10).fillColor('#000').text(bookingDate.toLocaleDateString(currencyLocale), { align: 'right' });
+      doc.fontSize(9).fillColor('#6b7280').text(bookingDate.toLocaleTimeString(currencyLocale, { hour: '2-digit', minute: '2-digit' }), { align: 'right' });
       doc.moveDown(2);
       
       // Booking Information
@@ -80,10 +81,10 @@ const generateBookingInvoicePDFKit = async (bookingDetails) => {
       doc.fontSize(10).fillColor('#000');
       doc.text(`Pickup Location: ${bookingDetails.pickupLocation || 'N/A'}`);
       doc.text(`Pickup City: ${bookingDetails.pickupCity || 'N/A'}`);
-      doc.text(`Pickup Date: ${pickupDate.toLocaleDateString('en-IN')} ${pickupDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`);
+      doc.text(`Pickup Date: ${pickupDate.toLocaleDateString(currencyLocale)} ${pickupDate.toLocaleTimeString(currencyLocale, { hour: '2-digit', minute: '2-digit' })}`);
       doc.text(`Drop-off Location: ${bookingDetails.dropLocation || 'N/A'}`);
       doc.text(`Drop-off City: ${bookingDetails.dropCity || 'N/A'}`);
-      doc.text(`Drop-off Date: ${dropOffDate.toLocaleDateString('en-IN')} ${dropOffDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`);
+      doc.text(`Drop-off Date: ${dropOffDate.toLocaleDateString(currencyLocale)} ${dropOffDate.toLocaleTimeString(currencyLocale, { hour: '2-digit', minute: '2-digit' })}`);
       doc.text(`Duration: ${diffDays} day(s)`);
       if (bookingDetails.distance) {
         doc.text(`Distance: ${bookingDetails.distance} km`);

@@ -3,7 +3,7 @@ import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 
 const ReviewsManagement = () => {
-  const { axios } = useAppContext();
+  const { axios, currencyLocale } = useAppContext();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [likedReviews, setLikedReviews] = useState({});
@@ -230,7 +230,7 @@ const ReviewsManagement = () => {
                       <div className='flex items-center gap-2 mb-2'>
                         <span className='font-semibold text-gray-800'>Owner Response</span>
                         <span className='text-xs text-gray-500'>
-                          {new Date(review.ownerResponse.respondedAt).toLocaleDateString('en-IN')}
+                          {new Date(review.ownerResponse.respondedAt).toLocaleDateString(currencyLocale)}
                         </span>
                       </div>
                       <p className='text-gray-700 bg-blue-50 p-3 rounded-lg'>{review.ownerResponse.text}</p>

@@ -21,7 +21,7 @@ const CarRecommendations = () => {
   const fetchRecommendations = async () => {
     try {
       const { data } = await axios.get(
-        `${backendUrl}/recommendations?limit=6`,
+        '/recommendations?limit=6',
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setRecommendations(data.recommendations || []);
@@ -35,7 +35,7 @@ const CarRecommendations = () => {
   const fetchTrending = async () => {
     try {
       const { data } = await axios.get(
-        `${backendUrl}/recommendations/trending?limit=6`
+        '/recommendations/trending?limit=6'
       );
       setTrending(data.trendingCars || []);
     } catch (error) {

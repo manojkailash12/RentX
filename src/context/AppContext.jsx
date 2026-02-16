@@ -54,6 +54,7 @@ export const AppProvider = ({ children }) => {
 
     const navigate = useNavigate();
     const currency = 'Rs.';
+    const currencyLocale = 'en-IN'; // Centralized locale configuration
 
     const [token, setToken] = useState(localStorage.getItem('token'))
     const [user, setUser] = useState(null)
@@ -303,7 +304,8 @@ export const AppProvider = ({ children }) => {
 
     const value = {
         navigate, 
-        currency, 
+        currency,
+        currencyLocale, // Add locale for number/date formatting
         axios, 
         backendUrl: API_BASE_URL, // Add backendUrl for components that need it
         user, 

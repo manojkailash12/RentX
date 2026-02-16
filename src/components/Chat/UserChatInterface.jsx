@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { AppContext } from '../../context/AppContext';
 
 const UserChatInterface = () => {
-  const { user } = useContext(AppContext);
+  const { user, currencyLocale } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('chat'); // chat, bookings, profile
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -385,7 +385,7 @@ const UserChatInterface = () => {
                         📅 {new Date(booking.pickupDate).toLocaleDateString()} - {new Date(booking.returnDate).toLocaleDateString()}
                       </p>
                       <p className="text-sm text-gray-600 mb-3">
-                        💰 ₹{booking.totalAmount?.toLocaleString('en-IN')}
+                        💰 ₹{booking.totalAmount?.toLocaleString(currencyLocale)}
                       </p>
                       <button
                         onClick={() => {
