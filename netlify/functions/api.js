@@ -871,21 +871,21 @@ app.put('/leave/:leaveId', protect, requireDB, isEmployee, updateLeaveRequest);
 app.post('/leave/:leaveId/cancel', protect, requireDB, isEmployee, cancelLeaveRequest);
 app.post('/leave/:leaveId/review', protect, requireDB, isEmployeeOrAdmin, reviewLeaveRequest);
 
-// Payroll Routes
+// Payroll Routes (Employee can view their own, Admin can view all)
 app.post('/payroll/generate', protect, requireDB, isAdmin, generatePayroll);
-app.get('/payroll', protect, requireDB, getPayroll);
+app.get('/payroll', protect, requireDB, isEmployeeOrAdmin, getPayroll);
 app.post('/payroll/:payrollId/pay', protect, requireDB, isAdmin, paySalary);
 app.post('/payroll/:payrollId/email', protect, requireDB, isAdmin, generateAndEmailPayslip);
-app.get('/payroll/:payrollId/download', protect, requireDB, downloadPayslip);
+app.get('/payroll/:payrollId/download', protect, requireDB, isEmployeeOrAdmin, downloadPayslip);
 
-// Employee Users Export Routes
-app.get('/employees/users/export/pdf', protect, requireDB, isEmployee, exportUsersPDF);
-app.get('/employees/users/export/excel', protect, requireDB, isEmployee, exportUsersExcel);
+// Employee Users Export Routes (Admin can also access)
+app.get('/employees/users/export/pdf', protect, requireDB, isEmployeeOrAdmin, exportUsersPDF);
+app.get('/employees/users/export/excel', protect, requireDB, isEmployeeOrAdmin, exportUsersExcel);
 
-// Employee Deleted Users Routes
+// Employee Deleted Users Routes (Admin can also access)
 app.get('/employees/deleted-users', protect, requireDB, isEmployeeOrAdmin, getDeletedUsers);
-app.get('/employees/deleted-users/export/pdf', protect, requireDB, isEmployee, exportDeletedUsersPDF);
-app.get('/employees/deleted-users/export/excel', protect, requireDB, isEmployee, exportDeletedUsersExcel);
+app.get('/employees/deleted-users/export/pdf', protect, requireDB, isEmployeeOrAdmin, exportDeletedUsersPDF);
+app.get('/employees/deleted-users/export/excel', protect, requireDB, isEmployeeOrAdmin, exportDeletedUsersExcel);
 
 // ========== NEW FEATURES ROUTES ==========
 

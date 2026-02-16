@@ -721,13 +721,28 @@ exports.generatePayroll = async (req, res) => {
 exports.getPayroll = async (req, res) => {
   try {
     const { employeeId, month, year, status } = req.query;
+    const userId = req.user._id;
+    const isAdmin = req.user.role === 'admin';
 
     const filter = {};
     
-    if (employeeId) {
-      const employee = await Employee.findOne({ employeeId });
-      if (employee) {
-        filter.employeeId = employee._id;
+    // If not admin, only show their own payroll
+    if (!isAdmin) {
+      const employee = await Employee.findOne({ userId });
+      if (!employee) {
+        return res.status(404).json({
+          success: false,
+          message: 'Employee record not found'
+        });
+      }
+      filter.employeeId = employee._id;
+    } else {
+      // Admin can filter by specific employee
+      if (employeeId) {
+        const employee = await Employee.findOne({ employeeId });
+        if (employee) {
+          filter.employeeId = employee._id;
+        }
       }
     }
 
@@ -1205,6 +1220,8 @@ exports.generateAndEmailPayslip = async (req, res) => {
 exports.downloadPayslip = async (req, res) => {
   try {
     const { payrollId } = req.params;
+    const userId = req.user._id;
+    const isAdmin = req.user.role === 'admin';
 
     // Get payroll with populated employee and user data
     const payroll = await Payroll.findById(payrollId)
@@ -1217,6 +1234,14 @@ exports.downloadPayslip = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Payroll record not found'
+      });
+    }
+
+    // Check if user has permission to download this payslip
+    if (!isAdmin && payroll.employeeId.userId._id.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only download your own payslips.'
       });
     }
 
