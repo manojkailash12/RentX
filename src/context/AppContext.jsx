@@ -82,7 +82,8 @@ export const AppProvider = ({ children }) => {
                 localStorage.setItem('userData', JSON.stringify(data.user));
             } else {
                 // Only clear token if it's an authentication error
-                if (data.message && data.message.includes('authenticated')) {
+                if (data.message && (data.message.includes('authenticated') || data.message.includes('authorized'))) {
+                    console.warn('Authentication failed, logging out user');
                     localStorage.removeItem('token');
                     localStorage.removeItem('userData');
                     setToken(null);
@@ -91,34 +92,53 @@ export const AppProvider = ({ children }) => {
                     setIsAdmin(false);
                     setIsEmployee(false);
                     delete axios.defaults.headers.common['Authorization'];
+                } else {
+                    // For other errors, try to restore from localStorage
+                    const storedUser = localStorage.getItem('userData');
+                    if (storedUser && !user) {
+                        try {
+                            const userData = JSON.parse(storedUser);
+                            setUser(userData);
+                            setIsOwner(true);
+                            setIsAdmin(userData.role === 'admin');
+                            setIsEmployee(userData.role === 'employee');
+                        } catch (e) {
+                            console.error('Error parsing stored user data:', e);
+                        }
+                    }
                 }
             }
         } catch (error) {
-            // Only clear token if it's a 401 Unauthorized error (invalid token)
+            console.error('fetchUser error:', error);
+            
+            // Only clear token if it's a 401 Unauthorized error (invalid/expired token)
             if (error.response && error.response.status === 401) {
+                console.warn('401 Unauthorized, logging out user');
                 localStorage.removeItem('token');
                 localStorage.removeItem('userData');
                 setToken(null);
                 setUser(null);
                 setIsOwner(false);
                 setIsAdmin(false);
+                setIsEmployee(false);
                 delete axios.defaults.headers.common['Authorization'];
             } else {
+                // For network errors, timeouts, or 500 errors, keep user logged in
                 // Try to restore user from localStorage if available
                 const storedUser = localStorage.getItem('userData');
                 if (storedUser && !user) {
                     try {
                         const userData = JSON.parse(storedUser);
+                        console.log('Restoring user from localStorage due to network error');
                         setUser(userData);
-                        setIsOwner(true); // Allow all users to access enterprise features
+                        setIsOwner(true);
                         setIsAdmin(userData.role === 'admin');
                         setIsEmployee(userData.role === 'employee');
                     } catch (e) {
-                        // Silent error handling
+                        console.error('Error parsing stored user data:', e);
                     }
                 }
             }
-            // For network errors (500, timeout, etc.), keep the user logged in
         } finally {
             setLoading(false);
         }
@@ -249,6 +269,7 @@ export const AppProvider = ({ children }) => {
                 setUser(userData);
                 setIsOwner(true); // Allow all users to access enterprise features
                 setIsAdmin(userData.role === 'admin');
+                setIsEmployee(userData.role === 'employee');
                 setToken(storedToken);
                 // Set axios header immediately
                 axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
