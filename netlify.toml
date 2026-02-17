@@ -463,10 +463,13 @@
   to = "/.netlify/functions/api/uploads/:splat"
   status = 200
 
+# SPA fallback - MUST be last to catch all non-API routes
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false
+  conditions = {Role = ["*"]}
 
 [[headers]]
   for = "/static/*"
