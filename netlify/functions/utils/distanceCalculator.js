@@ -158,6 +158,8 @@ const cityDistanceDatabase = {
   'raichur-bangalore': 380, 'bangalore-raichur': 380,
   'raichur-tirupati': 450, 'tirupati-raichur': 450,
   'raichur-vijayawada': 320, 'vijayawada-raichur': 320,
+  'raichur-chennai': 550, 'chennai-raichur': 550,
+  'raichur-sirwar': 128, 'sirwar-raichur': 128,
   
   // Other major routes
   'pune-nashik': 210, 'nashik-pune': 210,
