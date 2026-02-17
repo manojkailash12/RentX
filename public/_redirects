@@ -1,5 +1,5 @@
 # API routes - proxy to Netlify Functions
 /api/*  /.netlify/functions/api/:splat  200
 
-# SPA fallback - serve index.html for all other routes
+# SPA fallback - serve index.html for all other routes (must be last)
 /*  /index.html  200
