@@ -161,6 +161,11 @@ const cityDistanceDatabase = {
   'raichur-chennai': 550, 'chennai-raichur': 550,
   'raichur-sirwar': 128, 'sirwar-raichur': 128,
   
+  // Sirwar routes
+  'sirwar-chennai': 680, 'chennai-sirwar': 680,
+  'sirwar-bangalore': 510, 'bangalore-sirwar': 510,
+  'sirwar-hyderabad': 330, 'hyderabad-sirwar': 330,
+  
   // Other major routes
   'pune-nashik': 210, 'nashik-pune': 210,
   'pune-goa': 450, 'goa-pune': 450,
@@ -174,8 +179,13 @@ const cityDistanceDatabase = {
  * Get distance from database (instant, no API calls)
  */
 const getDistanceFromDatabase = (pickupLocation, dropLocation) => {
-  const pickup = pickupLocation.toLowerCase().trim().split(',')[0]; // Get city name only
-  const drop = dropLocation.toLowerCase().trim().split(',')[0];
+  // Extract city names - use the last part after comma (the city field)
+  const pickupParts = pickupLocation.toLowerCase().trim().split(',');
+  const dropParts = dropLocation.toLowerCase().trim().split(',');
+  
+  // Get the city name (last part after comma, or the whole string if no comma)
+  const pickup = pickupParts.length > 1 ? pickupParts[pickupParts.length - 1].trim() : pickupParts[0].trim();
+  const drop = dropParts.length > 1 ? dropParts[dropParts.length - 1].trim() : dropParts[0].trim();
   
   // If same location, return 0
   if (pickup === drop) {
