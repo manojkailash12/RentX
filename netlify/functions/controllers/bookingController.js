@@ -725,6 +725,18 @@ const cancelUserBooking = async (req, res) => {
       return res.json({ success: false, message: "Cannot cancel completed booking" });
     }
     
+    // Check if cancellation is within allowed time (2 minutes before pickup)
+    const now = new Date();
+    const pickupTime = new Date(booking.pickupDate);
+    const timeDifferenceInMinutes = (pickupTime - now) / (1000 * 60);
+    
+    if (timeDifferenceInMinutes <= 2) {
+      return res.json({ 
+        success: false, 
+        message: "Cannot cancel booking. Cancellation is only allowed up to 2 minutes before pickup time." 
+      });
+    }
+    
     // Update booking status to cancelled
     booking.status = 'cancelled';
     await booking.save();
