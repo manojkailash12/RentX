@@ -44,7 +44,7 @@ const CarRecommendations = () => {
   };
 
   const handleCarClick = (carId) => {
-    navigate(`/car/${carId}`);
+    navigate(`/car-details/${carId}`);
   };
 
   if (loading) {
