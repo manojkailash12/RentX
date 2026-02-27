@@ -6,11 +6,14 @@ const connectDB = require('../utils/db');
 // MongoDB session-based authentication
 const protect = async (req, res, next) => {
   try {
+    console.log('🔐 Auth middleware - checking authentication for:', req.url);
+    
     // Ensure database is connected before proceeding
     try {
       await connectDB();
+      console.log('✅ Database connected');
     } catch (dbError) {
-      console.error('Database connection failed in auth middleware:', dbError);
+      console.error('❌ Database connection failed in auth middleware:', dbError);
       return res.status(503).json({
         success: false,
         message: 'Service temporarily unavailable. Please try again.'
@@ -22,9 +25,11 @@ const protect = async (req, res, next) => {
     // Get session token from Authorization header
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       sessionToken = req.headers.authorization.split(' ')[1];
+      console.log('🔑 Session token found in Authorization header');
     }
 
     if (!sessionToken) {
+      console.warn('⚠️ No session token provided');
       return res.status(401).json({
         success: false,
         message: 'Not authorized, no session token'
@@ -32,15 +37,19 @@ const protect = async (req, res, next) => {
     }
 
     try {
+      console.log('🔍 Verifying session...');
       // Verify session from MongoDB
       const user = await verifySession(sessionToken);
       
       if (!user) {
+        console.warn('⚠️ Session verification failed - invalid or expired session');
         return res.status(401).json({
           success: false,
           message: 'Not authorized, invalid or expired session'
         });
       }
+
+      console.log('✅ Session verified for user:', user.name, 'Role:', user.role);
 
       // Extend session on each request (keep user logged in)
       await extendSession(sessionToken);
@@ -48,14 +57,14 @@ const protect = async (req, res, next) => {
       req.user = user;
       next();
     } catch (error) {
-      console.error('Error verifying session:', error);
+      console.error('❌ Error verifying session:', error);
       return res.status(401).json({
         success: false,
         message: 'Not authorized, session verification failed'
       });
     }
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('❌ Auth middleware error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error in authentication'

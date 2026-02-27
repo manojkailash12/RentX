@@ -85,12 +85,22 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
+      console.log('🔍 Fetching dashboard data...');
+      console.log('📝 Token:', token ? 'Present' : 'Missing');
+      console.log('📝 User:', user ? user.name : 'Not loaded');
+      
       const { data } = await axios.get('/owner/dashboard')
       if (data.success) {
         setData(data.dashboardData)
+        console.log('✅ Dashboard data loaded successfully');
+      } else {
+        console.warn('⚠️ Dashboard API returned success: false', data.message);
       }
     } catch (error) {
-      // Silent error handling
+      console.error('❌ Dashboard fetch error:', error.response?.status, error.response?.data?.message || error.message);
+      if (error.response?.status === 401) {
+        toast.error('Session expired. Please log in again.');
+      }
     } finally {
       setLoading(false)
     }
@@ -148,6 +158,8 @@ const Dashboard = () => {
   }
 
   const refreshAllData = useCallback(async () => {
+    console.log('🔄 Refreshing all dashboard data...');
+    console.log('📝 Current state - Token:', token ? 'Present' : 'Missing', 'User:', user?.name, 'Role:', user?.role);
     await fetchDashboardData()
     if (isAdmin) {
       await fetchAdminData()
@@ -295,191 +307,206 @@ const Dashboard = () => {
   };
 
   return (
-    <div className='h-full flex flex-col p-4 md:p-6 bg-gray-50 overflow-auto'>
-      <div className="flex justify-between items-start mb-4">
-        <Title title={getDashboardTitle()} subTitle={getDashboardSubtitle()} />
-        <div className="flex items-center gap-2">
-          {/* Export button for admin */}
-          {isAdmin && (
-            <>
-              <button 
-                onClick={handleExportExcel}
-                disabled={exportLoading}
-                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
-              >
-                {exportLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  '📊'
-                )}
-                {t('dashboard.excel')}
-              </button>
-            </>
-          )}
-          <button 
-            onClick={manualRefresh}
-            disabled={loading}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
-          >
-            <span className={loading ? 'animate-spin' : ''}>🔄</span>
-            {loading ? t('dashboard.refreshing') : t('dashboard.refresh')}
-          </button>
-        </div>
-      </div>
-
-      {/* Role indicator */}
-      <div className="mb-4">
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-          isAdmin ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-        }`}>
-          {isAdmin ? t('dashboard.adminPanel') : t('dashboard.userEnterprisePanel')}
-        </span>
-        <span className="ml-3 text-gray-600 text-sm">{t('dashboard.welcomeBack')}, {user?.name}!</span>
-        <span className="ml-3 text-xs text-gray-400">
-          {t('dashboard.autoRefresh')}
-          {process.env.NODE_ENV === 'development' && (
-            <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
-              🟢 {t('dashboard.active')}
-            </span>
-          )}
-        </span>
-      </div>
-
-      {/* Stats Cards - Responsive Grid */}
-      <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6'>
-        {getDashboardCards().map((card, index) => (
-          <div key={index} className='flex flex-col gap-2 p-4 rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center justify-center w-10 h-10 rounded-full bg-primary/10'>
-                <img src={card.icon} alt="" className='h-5 w-5' />
-              </div>
+    <div className='h-full flex flex-col bg-gray-50 overflow-auto'>
+      {/* Mobile-optimized header */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-3 md:p-4">
+        <div className="flex flex-col gap-3">
+          {/* Title and buttons row */}
+          <div className="flex justify-between items-start">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900 truncate">
+                {getDashboardTitle()}
+              </h1>
+              <p className="text-xs md:text-sm text-gray-500 truncate">
+                {getDashboardSubtitle()}
+              </p>
             </div>
-            <div>
-              <h1 className='text-xs text-gray-500 mb-1'>{card.title}</h1>
-              <p className='text-lg font-semibold text-gray-900'>{card.value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Content Area - Flexible Layout */}
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8'>
-        {/* Recent Bookings */}
-        <div className='lg:col-span-2 p-4 border border-gray-200 rounded-lg bg-white flex flex-col h-[400px]'>
-          <div className='mb-4 flex-shrink-0'>
-            <h1 className='text-lg font-medium'>{t('dashboard.recentBookings')}</h1>
-            <p className='text-gray-500 text-sm'>{isAdmin ? t('dashboard.latestPlatform') : t('dashboard.latestCustomer')}</p>
-          </div>
-          <div className='space-y-3 overflow-y-auto flex-1'>
-            {data.recentBookings && data.recentBookings.length > 0 ? (
-              data.recentBookings.map((booking, index) => (
-                booking.car || booking.carId ? (
-                  <div key={index} className='flex items-center justify-between p-3 bg-gray-50 rounded-lg'>
-                    <div className='flex items-center gap-3'>
-                      <div className='flex items-center justify-center w-10 h-10 rounded-full bg-primary/10'>
-                        <img src={assets.listIconColored} alt="" className='h-5 w-5' />
-                      </div>
-                      <div>
-                        <p className='font-medium text-sm'>{(booking.car || booking.carId)?.brand} {(booking.car || booking.carId)?.model}</p>
-                        <p className='text-xs text-gray-500'>{new Date(booking.createdAt).toLocaleDateString()}</p>
-                        {booking.bookingId && (
-                          <p className='text-xs text-gray-400'>ID: {booking.bookingId}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className='flex items-center gap-2'>
-                      <p className='text-sm font-medium'>
-                        ₹{booking.totalAmount || booking.price || 0}
-                      </p>
-                      <p className={`px-2 py-1 border rounded-full text-xs ${
-                        booking.status === 'confirmed' ? 'border-green-300 text-green-700 bg-green-50' :
-                        booking.status === 'pending' ? 'border-yellow-300 text-yellow-700 bg-yellow-50' :
-                        'border-gray-300 text-gray-700'
-                      }`}>
-                        {booking.status}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div key={index} className='text-sm text-red-500 italic p-3 bg-red-50 rounded-lg'>
-                    {t('dashboard.bookingInfoMissing')}
-                  </div>
-                )
-              ))
-            ) : (
-              <div className='text-sm text-gray-500 italic p-3 bg-gray-50 rounded-lg text-center'>
-                {t('dashboard.noRecentBookings')}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Revenue and Quick Actions */}
-        <div className='space-y-6'>
-          {/* Monthly Revenue */}
-          <div className='p-4 border border-gray-200 rounded-lg bg-white'>
-            <h1 className='text-lg font-medium mb-2'>{t('dashboard.monthlyRevenue')}</h1>
-            <p className='text-gray-500 text-sm mb-4'>{t('dashboard.revenueForMonth')}</p>
-            <p className='text-2xl font-semibold text-primary'>
-              ₹{typeof data.monthlyRevenue === 'string' ? 
-                data.monthlyRevenue.replace('₹', '').replace(/,/g, '') : 
-                data.monthlyRevenue || 0}
-            </p>
-            {isAdmin && (
-              <div className='mt-3 text-sm text-gray-600 space-y-1'>
-                <p>{t('dashboard.cash')}: ₹{adminData.cashEarnings}</p>
-                <p>{t('dashboard.online')}: ₹{adminData.onlineEarnings}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Admin Quick Actions */}
-          {isAdmin && (
-            <div className='p-4 border border-gray-200 rounded-lg bg-white'>
-              <h1 className='text-lg font-medium mb-2'>{t('dashboard.quickActions')}</h1>
-              <p className='text-gray-500 text-sm mb-4'>{t('dashboard.adminManagement')}</p>
-              <div className='space-y-2'>
+            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0 ml-2">
+              {/* Export button for admin - hide text on mobile */}
+              {isAdmin && (
                 <button 
                   onClick={handleExportExcel}
                   disabled={exportLoading}
-                  className='w-full text-left px-3 py-2 text-sm bg-green-50 hover:bg-green-100 rounded-md transition-colors disabled:opacity-50'
+                  className="px-2 md:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-1 md:gap-2 text-xs md:text-sm"
+                  title="Export Excel"
                 >
-                  📊 {t('dashboard.exportExcel')}
+                  {exportLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    '📊'
+                  )}
+                  <span className="hidden md:inline">{t('dashboard.excel')}</span>
                 </button>
-                <button 
-                  onClick={handleExportEarningsPDF}
-                  disabled={exportLoading}
-                  className='w-full text-left px-3 py-2 text-sm bg-red-50 hover:bg-red-100 rounded-md transition-colors disabled:opacity-50'
-                >
-                  📄 Export Earnings PDF
-                </button>
-                <button 
-                  onClick={handleExportEarningsExcel}
-                  disabled={exportLoading}
-                  className='w-full text-left px-3 py-2 text-sm bg-green-50 hover:bg-green-100 rounded-md transition-colors disabled:opacity-50'
-                >
-                  📊 Export Earnings Excel
-                </button>
-              </div>
+              )}
+              <button 
+                onClick={manualRefresh}
+                disabled={loading}
+                className="px-2 md:px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50 flex items-center gap-1 md:gap-2 text-xs md:text-sm"
+                title="Refresh"
+              >
+                <span className={loading ? 'animate-spin' : ''}>🔄</span>
+                <span className="hidden md:inline">{loading ? t('dashboard.refreshing') : t('dashboard.refresh')}</span>
+              </button>
             </div>
-          )}
+          </div>
+
+          {/* Role indicator - mobile optimized */}
+          <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm">
+            <span className={`px-2 md:px-3 py-1 rounded-full font-medium ${
+              isAdmin ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+            }`}>
+              {isAdmin ? t('dashboard.adminPanel') : t('dashboard.userEnterprisePanel')}
+            </span>
+            <span className="text-gray-600 truncate">
+              {t('dashboard.welcomeBack')}, {user?.name}!
+            </span>
+            {process.env.NODE_ENV === 'development' && (
+              <span className="px-2 py-1 bg-green-100 text-green-700 rounded flex items-center gap-1">
+                🟢 <span className="hidden sm:inline">{t('dashboard.active')}</span>
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Analytics Section - Admin Only */}
+      {/* Main content with padding */}
+      <div className="p-3 md:p-6 space-y-4 md:space-y-6">
+        {/* Stats Cards - Mobile optimized grid */}
+        <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4'>
+          {getDashboardCards().map((card, index) => (
+            <div key={index} className='flex flex-col gap-1 md:gap-2 p-3 md:p-4 rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow'>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10'>
+                  <img src={card.icon} alt="" className='h-4 w-4 md:h-5 md:w-5' />
+                </div>
+              </div>
+              <div>
+                <h2 className='text-[10px] md:text-xs text-gray-500 mb-0.5 md:mb-1 leading-tight'>{card.title}</h2>
+                <p className='text-base md:text-lg font-semibold text-gray-900'>{card.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Content Area - Mobile optimized layout */}
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6'>
+          {/* Recent Bookings - Mobile optimized */}
+          <div className='lg:col-span-2 p-3 md:p-4 border border-gray-200 rounded-lg bg-white flex flex-col'>
+            <div className='mb-3 md:mb-4 flex-shrink-0'>
+              <h2 className='text-base md:text-lg font-medium'>{t('dashboard.recentBookings')}</h2>
+              <p className='text-xs md:text-sm text-gray-500'>{isAdmin ? t('dashboard.latestPlatform') : t('dashboard.latestCustomer')}</p>
+            </div>
+            <div className='space-y-2 md:space-y-3 overflow-y-auto max-h-[400px] md:max-h-[500px]'>
+              {data.recentBookings && data.recentBookings.length > 0 ? (
+                data.recentBookings.map((booking, index) => (
+                  booking.car || booking.carId ? (
+                    <div key={index} className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 md:p-3 bg-gray-50 rounded-lg'>
+                      <div className='flex items-center gap-2 md:gap-3 min-w-0'>
+                        <div className='flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10 flex-shrink-0'>
+                          <img src={assets.listIconColored} alt="" className='h-4 w-4 md:h-5 md:w-5' />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className='font-medium text-xs md:text-sm truncate'>{(booking.car || booking.carId)?.brand} {(booking.car || booking.carId)?.model}</p>
+                          <p className='text-[10px] md:text-xs text-gray-500'>{new Date(booking.createdAt).toLocaleDateString()}</p>
+                          {booking.bookingId && (
+                            <p className='text-[10px] md:text-xs text-gray-400 truncate'>ID: {booking.bookingId}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className='flex items-center gap-2 justify-between sm:justify-end flex-shrink-0'>
+                        <p className='text-xs md:text-sm font-medium'>
+                          ₹{booking.totalAmount || booking.price || 0}
+                        </p>
+                        <p className={`px-2 py-0.5 md:py-1 border rounded-full text-[10px] md:text-xs ${
+                          booking.status === 'confirmed' ? 'border-green-300 text-green-700 bg-green-50' :
+                          booking.status === 'pending' ? 'border-yellow-300 text-yellow-700 bg-yellow-50' :
+                          'border-gray-300 text-gray-700'
+                        }`}>
+                          {booking.status}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={index} className='text-xs md:text-sm text-red-500 italic p-2 md:p-3 bg-red-50 rounded-lg'>
+                      {t('dashboard.bookingInfoMissing')}
+                    </div>
+                  )
+                ))
+              ) : (
+                <div className='text-xs md:text-sm text-gray-500 italic p-3 bg-gray-50 rounded-lg text-center'>
+                  {t('dashboard.noRecentBookings')}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Revenue and Quick Actions - Mobile optimized */}
+          <div className='space-y-4 md:space-y-6'>
+            {/* Monthly Revenue */}
+            <div className='p-3 md:p-4 border border-gray-200 rounded-lg bg-white'>
+              <h2 className='text-base md:text-lg font-medium mb-1 md:mb-2'>{t('dashboard.monthlyRevenue')}</h2>
+              <p className='text-xs md:text-sm text-gray-500 mb-2 md:mb-4'>{t('dashboard.revenueForMonth')}</p>
+              <p className='text-xl md:text-2xl font-semibold text-primary'>
+                ₹{typeof data.monthlyRevenue === 'string' ? 
+                  data.monthlyRevenue.replace('₹', '').replace(/,/g, '') : 
+                  data.monthlyRevenue || 0}
+              </p>
+              {isAdmin && (
+                <div className='mt-2 md:mt-3 text-xs md:text-sm text-gray-600 space-y-1'>
+                  <p>{t('dashboard.cash')}: ₹{adminData.cashEarnings}</p>
+                  <p>{t('dashboard.online')}: ₹{adminData.onlineEarnings}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Admin Quick Actions */}
+            {isAdmin && (
+              <div className='p-3 md:p-4 border border-gray-200 rounded-lg bg-white'>
+                <h2 className='text-base md:text-lg font-medium mb-1 md:mb-2'>{t('dashboard.quickActions')}</h2>
+                <p className='text-xs md:text-sm text-gray-500 mb-2 md:mb-4'>{t('dashboard.adminManagement')}</p>
+                <div className='space-y-2'>
+                  <button 
+                    onClick={handleExportExcel}
+                    disabled={exportLoading}
+                    className='w-full text-left px-2 md:px-3 py-2 text-xs md:text-sm bg-green-50 hover:bg-green-100 rounded-md transition-colors disabled:opacity-50'
+                  >
+                    📊 {t('dashboard.exportExcel')}
+                  </button>
+                  <button 
+                    onClick={handleExportEarningsPDF}
+                    disabled={exportLoading}
+                    className='w-full text-left px-2 md:px-3 py-2 text-xs md:text-sm bg-red-50 hover:bg-red-100 rounded-md transition-colors disabled:opacity-50'
+                  >
+                    📄 Export Earnings PDF
+                  </button>
+                  <button 
+                    onClick={handleExportEarningsExcel}
+                    disabled={exportLoading}
+                    className='w-full text-left px-2 md:px-3 py-2 text-xs md:text-sm bg-green-50 hover:bg-green-100 rounded-md transition-colors disabled:opacity-50'
+                  >
+                    📊 Export Earnings Excel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics Section - Admin Only - Mobile Optimized */}
       {isAdmin && (
-        <div className="space-y-6 mt-8">
-          {/* Analytics Header */}
-          <div className="flex items-center justify-between border-t border-gray-200 pt-6">
+        <div className="p-3 md:p-6 space-y-4 md:space-y-6">
+          {/* Analytics Header - Mobile optimized */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-200 pt-4 md:pt-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">📊 Advanced Analytics</h2>
-              <p className="text-gray-600 text-sm mt-1">Detailed platform insights and performance metrics</p>
+              <h2 className="text-lg md:text-2xl font-bold text-gray-900">📊 Advanced Analytics</h2>
+              <p className="text-xs md:text-sm text-gray-600 mt-1">Detailed platform insights</p>
             </div>
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              className="px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-xs md:text-sm w-full sm:w-auto"
             >
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
@@ -493,28 +520,28 @@ const Dashboard = () => {
             </div>
           ) : (
             <>
-              {/* Charts Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Charts Section - Mobile optimized */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
                 {/* Revenue Trend Chart */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">📈 Revenue Trend</h3>
-                    <div className="flex gap-2">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 md:mb-4">
+                    <h3 className="text-sm md:text-lg font-semibold text-gray-900">📈 Revenue Trend</h3>
+                    <div className="flex gap-1 md:gap-2">
                       <button
                         onClick={() => handleExportChart('revenue-trend', 'pdf')}
                         disabled={exportLoading}
-                        className="px-3 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors disabled:opacity-50"
+                        className="px-2 md:px-3 py-1 text-[10px] md:text-xs bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors disabled:opacity-50"
                         title="Export as PDF"
                       >
-                        📄 PDF
+                        📄 <span className="hidden sm:inline">PDF</span>
                       </button>
                       <button
                         onClick={() => handleExportChart('revenue-trend', 'excel')}
                         disabled={exportLoading}
-                        className="px-3 py-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors disabled:opacity-50"
+                        className="px-2 md:px-3 py-1 text-[10px] md:text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors disabled:opacity-50"
                         title="Export as Excel"
                       >
-                        📊 Excel
+                        📊 <span className="hidden sm:inline">Excel</span>
                       </button>
                     </div>
                   </div>
@@ -522,25 +549,25 @@ const Dashboard = () => {
                 </div>
 
                 {/* Booking Status Chart */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">📊 Booking Status</h3>
-                    <div className="flex gap-2">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 md:mb-4">
+                    <h3 className="text-sm md:text-lg font-semibold text-gray-900">📊 Booking Status</h3>
+                    <div className="flex gap-1 md:gap-2">
                       <button
                         onClick={() => handleExportChart('booking-status', 'pdf')}
                         disabled={exportLoading}
-                        className="px-3 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors disabled:opacity-50"
+                        className="px-2 md:px-3 py-1 text-[10px] md:text-xs bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors disabled:opacity-50"
                         title="Export as PDF"
                       >
-                        📄 PDF
+                        📄 <span className="hidden sm:inline">PDF</span>
                       </button>
                       <button
                         onClick={() => handleExportChart('booking-status', 'excel')}
                         disabled={exportLoading}
-                        className="px-3 py-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors disabled:opacity-50"
+                        className="px-2 md:px-3 py-1 text-[10px] md:text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors disabled:opacity-50"
                         title="Export as Excel"
                       >
-                        📊 Excel
+                        📊 <span className="hidden sm:inline">Excel</span>
                       </button>
                     </div>
                   </div>
@@ -548,25 +575,25 @@ const Dashboard = () => {
                 </div>
 
                 {/* Top Cars Chart */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">🚗 Top Performing Cars</h3>
-                    <div className="flex gap-2">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 md:mb-4">
+                    <h3 className="text-sm md:text-lg font-semibold text-gray-900">🚗 Top Performing Cars</h3>
+                    <div className="flex gap-1 md:gap-2">
                       <button
                         onClick={() => handleExportChart('top-cars', 'pdf')}
                         disabled={exportLoading}
-                        className="px-3 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors disabled:opacity-50"
+                        className="px-2 md:px-3 py-1 text-[10px] md:text-xs bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors disabled:opacity-50"
                         title="Export as PDF"
                       >
-                        📄 PDF
+                        📄 <span className="hidden sm:inline">PDF</span>
                       </button>
                       <button
                         onClick={() => handleExportChart('top-cars', 'excel')}
                         disabled={exportLoading}
-                        className="px-3 py-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors disabled:opacity-50"
+                        className="px-2 md:px-3 py-1 text-[10px] md:text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors disabled:opacity-50"
                         title="Export as Excel"
                       >
-                        📊 Excel
+                        📊 <span className="hidden sm:inline">Excel</span>
                       </button>
                     </div>
                   </div>

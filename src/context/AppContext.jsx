@@ -293,12 +293,18 @@ export const AppProvider = ({ children }) => {
     useEffect(() => {
         if (token) {
             // Set axios header whenever token changes
+            console.log('🔑 Setting Authorization header with token');
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             
             // Only fetch if we don't have user data already
             if (!user) {
+                console.log('👤 Fetching user data...');
                 fetchUser();
+            } else {
+                console.log('👤 User already loaded:', user.name);
             }
+        } else {
+            console.log('⚠️ No token available');
         }
     }, [token])
 

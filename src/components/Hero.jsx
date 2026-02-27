@@ -14,7 +14,7 @@ const Hero = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
-      className="min-h-screen flex items-center justify-center px-6 md:px-16 lg:px-24 xl:px-32 py-20 bg-white">
+      className="min-h-[80vh] md:min-h-screen flex items-center justify-center px-4 md:px-16 lg:px-24 xl:px-32 py-12 md:py-20 bg-white">
       
       <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         {/* Left side - Text content */}
@@ -26,12 +26,12 @@ const Hero = () => {
           
           <p className="text-sm text-gray-600 font-medium">{t('hero.planTrip')}</p>
           
-          <h1 className="text-5xl md:text-6xl font-bold leading-tight">
-            {t('hero.saveBig')} <span className="text-green-600">{t('hero.big')}</span> {t('hero.withOur')}<br />
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight">
+            {t('hero.saveBig')} <span className="text-green-600">{t('hero.big')}</span> {t('hero.withOur')}<br className="hidden md:block" />
             {t('hero.carRental')}
           </h1>
           
-          <p className="text-gray-600 text-lg max-w-xl">
+          <p className="text-gray-600 text-base md:text-lg max-w-xl">
             {t('hero.description')}
           </p>
           
@@ -39,7 +39,7 @@ const Hero = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/cars')}
-            className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg font-semibold text-lg shadow-lg transition-all flex items-center gap-2">
+            className="bg-green-600 hover:bg-green-700 text-white px-6 md:px-8 py-3 md:py-4 rounded-lg font-semibold text-base md:text-lg shadow-lg transition-all flex items-center gap-2 w-full sm:w-auto justify-center">
             {t('hero.bookNow')}
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

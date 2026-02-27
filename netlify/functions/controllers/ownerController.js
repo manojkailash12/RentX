@@ -550,15 +550,19 @@ const toggleCarAvailability = async (req, res) => {
 const getDashboardData = async (req, res) => {
   try {
     const { _id, role } = req.user;
+    
+    console.log('📊 Dashboard request from user:', { userId: _id, role });
 
-    if (!['admin', 'owner'].includes(role)) {
+    // Allow admin, user (who can be car owners), and employee roles
+    if (!['admin', 'user', 'employee'].includes(role)) {
+      console.warn('⚠️ Unauthorized role:', role);
       return res.json({ success: false, message: "Unauthorized" });
     }
 
     let carsQuery = {};
     let bookingsQuery = {};
     
-    if (role === 'owner' || role === 'user') {
+    if (role === 'user') {
       carsQuery = { owner: _id };
       bookingsQuery = { 
         $or: [
@@ -567,7 +571,7 @@ const getDashboardData = async (req, res) => {
         ]
       };
     }
-    // If admin, get all data (no filter)
+    // If admin or employee, get all data (no filter)
 
     const cars = await Car.find(carsQuery);
     const bookings = await Booking.find(bookingsQuery)
@@ -621,9 +625,10 @@ const getDashboardData = async (req, res) => {
       pendingApprovalCars: cars.filter(car => !car.isApproved).length,
     };
 
+    console.log('✅ Dashboard data prepared:', { totalCars: dashboardData.totalCars, totalBookings: dashboardData.totalBookings });
     res.json({ success: true, dashboardData });
   } catch (error) {
-    console.log(error.message);
+    console.error('❌ Dashboard error:', error);
     res.json({ success: false, message: error.message });
   }
 };

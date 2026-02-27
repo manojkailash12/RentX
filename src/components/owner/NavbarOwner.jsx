@@ -73,16 +73,16 @@ const NavbarOwner = () => {
     ];
 
   return (
-    <div className='flex items-center justify-between px-6 md:px-10 py-3 text-gray-500 border-b border-borderColor relative transition-all bg-white'>
-        <div className='flex items-center gap-4'>
+    <div className='flex items-center justify-between px-3 md:px-6 lg:px-10 py-2 md:py-3 text-gray-500 border-b border-borderColor relative transition-all bg-white'>
+        <div className='flex items-center gap-2 md:gap-4'>
             <Link to='/'>
-                <img src={assets.logo} alt="" className='h-7'/>
+                <img src={assets.logo} alt="" className='h-6 md:h-7'/>
             </Link>
             
-            {/* Back to Home Button */}
+            {/* Back to Home Button - Hidden on mobile */}
             <button
                 onClick={() => navigate('/')}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors"
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors"
             >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -91,49 +91,50 @@ const NavbarOwner = () => {
             </button>
         </div>
         
-        <div className='flex items-center gap-4'>
+        <div className='flex items-center gap-2 md:gap-4'>
+            {/* Role Badge - Smaller on mobile */}
             <div className='text-center'>
-                <span className={`text-xs px-2 py-1 rounded-full ${
+                <span className={`text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded-full ${
                     isAdmin ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
                 }`}>
-                    {isAdmin ? 'Admin Panel' : 'Enterprise Panel'}
+                    {isAdmin ? 'Admin' : 'Enterprise'}
                 </span>
             </div>
 
-            {/* Logout Button */}
+            {/* Logout Button - Hidden on mobile, shown in dropdown */}
             <button
                 onClick={() => {
                     logout();
                     navigate('/');
                 }}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
             >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                Logout
+                <span className="hidden lg:inline">Logout</span>
             </button>
 
             {/* Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
                 <button
                     onClick={() => setShowDropdown(!showDropdown)}
-                    className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                     {/* Profile Image or Initials */}
-                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
+                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs md:text-sm font-medium">
                         {user?.image ? (
                             <img 
                                 src={user.image} 
                                 alt="Profile" 
-                                className="w-8 h-8 rounded-full object-cover"
+                                className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover"
                             />
                         ) : (
                             getUserInitials()
                         )}
                     </div>
                     <svg 
-                        className={`w-4 h-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} 
+                        className={`w-3 h-3 md:w-4 md:h-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} 
                         fill="none" 
                         stroke="currentColor" 
                         viewBox="0 0 24 24"
@@ -147,10 +148,10 @@ const NavbarOwner = () => {
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                         {/* User Info Header */}
                         <div className="px-4 py-2 border-b border-gray-100">
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-gray-900 truncate">
                                 {user?.name || 'User'}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 truncate">
                                 {user?.email || 'No email'}
                             </p>
                         </div>
@@ -168,11 +169,11 @@ const NavbarOwner = () => {
                                 }`}
                             >
                                 <span className="text-lg">{item.icon}</span>
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className={`text-sm font-medium ${item.isDanger ? 'text-red-600' : 'text-gray-700'}`}>
                                         {item.label}
                                     </p>
-                                    <p className="text-xs text-gray-500">{item.description}</p>
+                                    <p className="text-xs text-gray-500 truncate">{item.description}</p>
                                 </div>
                             </button>
                         ))}

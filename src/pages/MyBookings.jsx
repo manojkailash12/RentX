@@ -333,8 +333,118 @@ const MyBookings = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: 0.1 * index }}
                   key={booking._id} 
-                  className='grid grid-cols-1 md:grid-cols-4 gap-6 p-6 border border-borderColor rounded-lg mt-5 first:mt-12 hover:shadow-md transition-shadow'
+                  className='border border-borderColor rounded-lg mt-5 first:mt-12 hover:shadow-md transition-shadow overflow-hidden'
                 >
+                  {/* Mobile Layout */}
+                  <div className='md:hidden'>
+                    {/* Car Image and Basic Info */}
+                    <div className='p-4 bg-gray-50'>
+                      <div className='flex gap-3'>
+                        <div className='w-24 h-24 rounded-md overflow-hidden flex-shrink-0'>
+                          <img 
+                            src={getCarImageSrc(booking)} 
+                            alt={`${car.brand} ${car.model}`}
+                            className='w-full h-full object-cover' 
+                            onError={() => handleImageError(booking._id, car.image)}
+                          />
+                        </div>
+                        <div className='flex-1'>
+                          <p className='text-base font-medium'>{car.brand} {car.model}</p>
+                          <p className='text-xs text-gray-500'>{car.year} • {car.category}</p>
+                          {car.ownerType === 'user' && (
+                            <p className='text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full inline-block mt-1'>
+                              User Listed
+                            </p>
+                          )}
+                          <div className='flex items-center gap-2 flex-wrap mt-2'>
+                            {booking.bookingId && (
+                              <p className='px-2 py-1 bg-white rounded text-xs font-medium'>
+                                {booking.bookingId}
+                              </p>
+                            )}
+                            <p className={`px-2 py-1 text-xs rounded-full ${
+                              booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : 
+                              booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              booking.status === 'completed' ? 'bg-blue-100 text-blue-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {t(`bookings.${booking.status}`)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Booking Details */}
+                    <div className='p-4 space-y-3'>
+                      <div className='flex justify-between items-center'>
+                        <span className='text-xs text-gray-500'>{t('bookings.totalAmount')}</span>
+                        <span className='text-lg font-semibold text-primary'>
+                          ₹{(booking.totalAmount || booking.price || 0).toLocaleString(currencyLocale)}
+                        </span>
+                      </div>
+
+                      <div className='text-xs space-y-2'>
+                        <div className='flex items-start gap-2'>
+                          <img src={assets.calendar_icon_colored} alt="" className='w-3 h-3 mt-0.5' />
+                          <div>
+                            <p className='text-gray-500'>{t('bookings.rentalPeriod')} ({days} {t('bookings.days')})</p>
+                            <p className='text-gray-700'>{new Date(booking.pickupDate).toLocaleDateString(currencyLocale)} to {new Date(booking.returnDate).toLocaleDateString(currencyLocale)}</p>
+                          </div>
+                        </div>
+
+                        <div className='flex items-start gap-2'>
+                          <img src={assets.location_icon_colored} alt="" className='w-3 h-3 mt-0.5' />
+                          <div>
+                            <p className='text-gray-500'>{t('bookings.journey')}</p>
+                            <p className='text-gray-700'>{booking.pickupLocation || car.location} → {booking.dropLocation || car.location}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons - Mobile */}
+                      <div className='grid grid-cols-2 gap-2 pt-3 border-t'>
+                        <button
+                          onClick={() => downloadInvoice(booking._id)}
+                          className='px-3 py-2 bg-primary text-white rounded-md hover:bg-primary-dull transition-colors text-xs flex items-center justify-center gap-1'
+                        >
+                          📄 {t('bookings.downloadInvoice')}
+                        </button>
+                        
+                        <button
+                          onClick={() => viewBookingDetails(booking)}
+                          className='px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-xs flex items-center justify-center gap-1'
+                        >
+                          👁️ {t('bookings.viewDetails')}
+                        </button>
+
+                        {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                          <button
+                            onClick={() => cancelBooking(booking._id)}
+                            disabled={cancellingBookingId === booking._id}
+                            className='px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs flex items-center justify-center gap-1 disabled:opacity-50 col-span-2'
+                          >
+                            {cancellingBookingId === booking._id ? `⏳ ${t('bookings.cancelling')}` : `❌ ${t('bookings.cancelBooking')}`}
+                          </button>
+                        )}
+
+                        {booking.status === 'confirmed' && (
+                          <button
+                            onClick={() => {
+                              setGpsBookingId(booking._id);
+                              setShowGPSModal(true);
+                            }}
+                            className='px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-xs flex items-center justify-center gap-1 col-span-2'
+                          >
+                            📍 GPS Tracking
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Desktop Layout */}
+                  <div className='hidden md:grid md:grid-cols-4 gap-6 p-6'>
                   {/* car image + info */}
                   <div className='md:col-span-1'>
                     <div className='rounded-md overflow-hidden mb-3'>
@@ -504,6 +614,7 @@ const MyBookings = () => {
                         </p>
                       )}
                     </div>
+                  </div>
                   </div>
                 </motion.div>
               )

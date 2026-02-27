@@ -33,6 +33,12 @@ const Navbar = () => {
         };
     }, []);
 
+    // Close mobile menu when route changes
+    useEffect(() => {
+        setOpen(false);
+        setShowDropdown(false);
+    }, [location.pathname]);
+
     // Get user's initials for avatar
     const getUserInitials = () => {
         if (!user?.name) return 'U';
@@ -139,7 +145,7 @@ const Navbar = () => {
 
       <div className={`max-sm:fixed max-sm:h-screen max-sm:w-full max-sm:top-16 max-sm:border-t border-borderColor right-0 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8 max-sm:p-4 transition-all duration-300 z-50 ${location.pathname === "/" ? "bg-light" : "bg-white"} ${open ? "max-sm:translate-x-0" : "max-sm:translate-x-full"}`}>
         {getMenuLinks().map((link, index)=> (
-            <Link key={index} to={link.path}>
+            <Link key={index} to={link.path} onClick={() => setOpen(false)}>
                 {link.name}
             </Link>
         ))}
@@ -148,7 +154,7 @@ const Navbar = () => {
             <LanguageSwitcher />
             
             {user && (
-              <Link to="/chat" className="relative">
+              <Link to="/chat" className="relative" onClick={() => setOpen(false)}>
                 <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
                   <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -176,7 +182,10 @@ const Navbar = () => {
             
             {user && (
               <button 
-                onClick={() => navigate(getDashboardPath())} 
+                onClick={() => {
+                  navigate(getDashboardPath());
+                  setOpen(false);
+                }} 
                 className="cursor-pointer hover:text-primary transition-colors"
               >
                 {getDashboardText()}
@@ -188,6 +197,7 @@ const Navbar = () => {
                 onClick={() => {
                   logout();
                   navigate('/');
+                  setOpen(false);
                 }}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
               >
@@ -246,6 +256,7 @@ const Navbar = () => {
                                 onClick={() => {
                                     item.action();
                                     setShowDropdown(false);
+                                    setOpen(false); // Close mobile menu when dropdown item is clicked
                                 }}
                                 className={`w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${
                                     item.isDanger ? 'border-t border-gray-100 mt-1 text-red-600' : ''

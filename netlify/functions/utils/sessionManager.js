@@ -36,8 +36,11 @@ const createSession = async (userId, userAgent = '', ipAddress = '') => {
 const verifySession = async (sessionToken) => {
     try {
         if (!sessionToken) {
+            console.warn('⚠️ verifySession: No session token provided');
             return null;
         }
+        
+        console.log('🔍 verifySession: Looking up session in database...');
         
         // Add timeout to prevent hanging - INCREASED timeout
         const timeoutPromise = new Promise((_, reject) => {
@@ -56,12 +59,14 @@ const verifySession = async (sessionToken) => {
         const session = await Promise.race([sessionPromise, timeoutPromise]);
         
         if (!session) {
+            console.warn('⚠️ verifySession: No active session found or session expired');
             return null;
         }
         
+        console.log('✅ verifySession: Session found for user:', session.userId?.name);
         return session.userId;
     } catch (error) {
-        console.error('Error verifying session:', error);
+        console.error('❌ verifySession error:', error.message);
         return null;
     }
 };
